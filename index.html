@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel Differ - 本地 Excel 比較工具</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <h1>📊 Excel Differ</h1>
+        <p>本地 Excel 文件比較工具 - 完全在瀏覽器運行，數據不上傳</p>
+      </header>
+
+      <!-- Upload Section -->
+      <section id="uploadSection" class="upload-section">
+        <div class="upload-container">
+          <div class="upload-box">
+            <div class="upload-area" id="uploadA">
+              <div class="upload-icon">📁</div>
+              <h3>File A (原始版本)</h3>
+              <input type="file" id="fileA" accept=".xlsx,.xls,.csv" hidden />
+              <button onclick="document.getElementById('fileA').click()">選擇文件</button>
+              <p class="file-name" id="fileNameA">未選擇文件</p>
+            </div>
+          </div>
+
+          <div class="upload-divider">VS</div>
+
+          <div class="upload-box">
+            <div class="upload-area" id="uploadB">
+              <div class="upload-icon">📁</div>
+              <h3>File B (新版本)</h3>
+              <input type="file" id="fileB" accept=".xlsx,.xls,.csv" hidden />
+              <button onclick="document.getElementById('fileB').click()">選擇文件</button>
+              <p class="file-name" id="fileNameB">未選擇文件</p>
+            </div>
+          </div>
+        </div>
+
+        <button id="compareBtn" class="compare-btn" disabled>開始比較</button>
+      </section>
+
+      <!-- Summary Section -->
+      <section id="summarySection" class="summary-section" style="display: none">
+        <div class="summary-header">
+          <h2>📋 比較摘要</h2>
+          <button id="backBtn" class="back-btn">← 重新上傳</button>
+        </div>
+
+        <div class="file-info">
+          <div class="file-info-item"><strong>File A:</strong> <span id="summaryFileA"></span></div>
+          <div class="file-info-item"><strong>File B:</strong> <span id="summaryFileB"></span></div>
+        </div>
+
+        <div class="sheet-changes">
+          <h3>Sheet 變更：</h3>
+          <p class="hint">💡 點擊 Sheet 查看詳細差異</p>
+          <div id="sheetChangesList"></div>
+        </div>
+
+      </section>
+
+      <!-- Diff Viewer Section -->
+      <section id="diffSection" class="diff-section" style="display: none">
+        <div class="diff-header">
+          <button id="backToSummaryBtn" class="back-btn">← 返回摘要</button>
+          <h2 id="currentSheetTitle">Sheet 比較</h2>
+        </div>
+
+        <!-- Sheet Navigation Tabs -->
+        <div id="sheetNavBar" class="sheet-nav-bar"></div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color added"></span> 新增</div>
+          <div class="legend-item"><span class="legend-color removed"></span> 刪除</div>
+          <div class="legend-item"><span class="legend-color modified"></span> 修改</div>
+          <div class="legend-item"><span class="legend-color unchanged"></span> 無變化</div>
+          <div class="sync-control">
+            <button id="syncToggle" class="sync-button active" title="點擊切換同步滾動">
+              <span class="sync-icon">🔗</span>
+              <span class="sync-text">同步滾動</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Side-by-Side Table View -->
+        <!-- Diff Container -->
+        <div class="diff-container">
+          <!-- Left Pane (File A) -->
+          <div class="diff-pane" id="diffPaneA">
+            <div class="pane-header">
+              <h3>📄 File A (原始)</h3>
+              <span id="fileAName"></span>
+            </div>
+            <div class="table-wrapper">
+              <table class="diff-table" id="tableA"></table>
+            </div>
+          </div>
+
+          <!-- Right Pane (File B) -->
+          <div class="diff-pane" id="diffPaneB">
+            <div class="pane-header">
+              <h3>📄 File B (新版)</h3>
+              <span id="fileBName"></span>
+            </div>
+            <div class="table-wrapper">
+              <table class="diff-table" id="tableB"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none">
+      <div class="spinner"></div>
+      <p>處理中...</p>
+    </div>
+
+    <!-- SheetJS Library -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Our Modules -->
+    <script src="js/excelParser.js"></script>
+    <script src="js/diffEngine.js"></script>
+    <script src="js/fileHandler.js"></script>
+    <script src="js/summaryView.js"></script>
+    <script src="js/navBar.js"></script>
+    <script src="js/diffViewer.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

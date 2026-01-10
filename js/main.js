@@ -1,147 +1,165 @@
-// main.js - 主流程控制（Safari 兼容版）
+// main.js - Main application flow controller (Safari compatible)
 
 const App = {
-    
-    // 初始化應用
-    init() {
-        console.log('📊 Excel Differ 初始化...');
-        
-        // 檢查 SheetJS 是否加載
-        if (typeof XLSX === 'undefined') {
-            alert('錯誤：SheetJS 庫未加載！');
-            return;
-        }
-        
-        // 初始化文件處理器
-        FileHandler.init();
-        
-        // 綁定事件
-        this.bindEvents();
-        
-        console.log('✅ 初始化完成');
-    },
-    
-    // 綁定事件
-    bindEvents() {
-        // 比較按鈕
-        document.getElementById('compareBtn').addEventListener('click', () => {
-            this.startComparison();
-        });
-        
-        // 返回上傳按鈕
-        document.getElementById('backBtn').addEventListener('click', () => {
-            this.backToUpload();
-        });
-        
-        // 返回摘要按鈕
-        document.getElementById('backToSummaryBtn').addEventListener('click', () => {
-            this.backToSummary();
-        });
-    },
-    
-    // 👇 新增：等待瀏覽器完成渲染
-    waitForRender() {
-        return new Promise(resolve => {
-            // 使用 setTimeout 確保 UI 更新完成
-            setTimeout(() => {
-                // 再用 requestAnimationFrame 確保下一幀已繪製
-                requestAnimationFrame(() => {
-                    resolve();
-                });
-            }, 0);
-        });
-    },
-    
-    // 開始比較流程
-    async startComparison() {
-        try {
-            // 顯示 loading
-            this.showLoading(true);
-            
-            // 👇 等待 loading 完成渲染（Safari 修復）
-            await this.waitForRender();
-            
-            // 讀取文件
-            console.log('📖 讀取文件...');
-            const fileDataA = await FileHandler.getFileData('A');
-            const fileDataB = await FileHandler.getFileData('B');
-            
-            // 👇 再次等待，確保 UI 穩定
-            await this.waitForRender();
-            
-            // 解析 Excel
-            console.log('🔍 解析 Excel...');
-            const parsedA = ExcelParser.parse(fileDataA.arrayBuffer, fileDataA.file.name);
-            const parsedB = ExcelParser.parse(fileDataB.arrayBuffer, fileDataB.file.name);
-            
-            console.log('File A:', parsedA);
-            console.log('File B:', parsedB);
-            
-            // 👇 等待解析完成後 UI 更新
-            await this.waitForRender();
-            
-            // 執行 Diff
-            console.log('⚡ 執行差異比較...');
-            const diffResult = DiffEngine.compare(parsedA, parsedB);
-            
-            console.log('Diff 結果:', diffResult);
-            
-            // 隱藏 loading
-            this.showLoading(false);
-            
-            // 👇 等待 loading 隱藏完成
-            await this.waitForRender();
-            
-            // 顯示 Summary
-            SummaryView.show(diffResult, parsedA, parsedB);
-            
-        } catch (error) {
-            this.showLoading(false);
-            console.error('比較過程中發生錯誤:', error);
-            alert(`錯誤：${error.message}`);
-        }
-    },
-    
-    // 返回上傳頁面
-    backToUpload() {
-        // 隱藏 summary
-        SummaryView.hide();
-        
-        // 隱藏 diff
-        DiffViewer.hide();
-        
-        // 顯示上傳區域
-        document.getElementById('uploadSection').style.display = 'block';
-        
-        // 重置文件
-        FileHandler.reset();
-    },
-    
-    // 返回摘要頁面
-    backToSummary() {
-        // 隱藏 diff
-        DiffViewer.hide();
-        
-        // 顯示 summary
-        document.getElementById('summarySection').style.display = 'block';
-    },
-    
-    // 顯示/隱藏 loading
-    showLoading(show) {
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.style.display = show ? 'flex' : 'none';
+  /**
+   * Initialize the application
+   * Sets up file handlers and event bindings
+   */
+  init() {
+    console.log('📊 Excel Differ initializing...');
+
+    // Check if SheetJS library is loaded
+    if (typeof XLSX === 'undefined') {
+      alert('Error: SheetJS library not loaded!');
+      return;
     }
+
+    // Initialize file handler
+    FileHandler.init();
+
+    // Bind events
+    this.bindEvents();
+
+    console.log('✅ Initialization complete');
+  },
+
+  /**
+   * Bind event listeners to UI elements
+   */
+  bindEvents() {
+    // Compare button
+    document.getElementById('compareBtn').addEventListener('click', () => {
+      this.startComparison();
+    });
+
+    // Back to upload button
+    document.getElementById('backBtn').addEventListener('click', () => {
+      this.backToUpload();
+    });
+
+    // Back to summary button
+    document.getElementById('backToSummaryBtn').addEventListener('click', () => {
+      this.backToSummary();
+    });
+  },
+
+  /**
+   * Wait for browser to complete rendering
+   * This fixes Safari rendering issues by ensuring UI updates are complete
+   * @returns {Promise<void>} Resolves when rendering is complete
+   */
+  waitForRender() {
+    return new Promise((resolve) => {
+      // Use setTimeout to ensure UI update is complete
+      setTimeout(() => {
+        // Use requestAnimationFrame to ensure next frame is rendered
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      }, 0);
+    });
+  },
+
+  /**
+   * Start the file comparison process
+   * Reads files, parses Excel data, performs diff, and displays results
+   */
+  async startComparison() {
+    try {
+      // Show loading overlay
+      this.showLoading(true);
+
+      // Wait for loading overlay to render (Safari fix)
+      await this.waitForRender();
+
+      // Read files
+      console.log('📖 Reading files...');
+      const fileDataA = await FileHandler.getFileData('A');
+      const fileDataB = await FileHandler.getFileData('B');
+
+      // Wait again to ensure UI is stable
+      await this.waitForRender();
+
+      // Parse Excel files
+      console.log('🔍 Parsing Excel...');
+      const parsedA = ExcelParser.parse(fileDataA.arrayBuffer, fileDataA.file.name);
+      const parsedB = ExcelParser.parse(fileDataB.arrayBuffer, fileDataB.file.name);
+
+      console.log('File A:', parsedA);
+      console.log('File B:', parsedB);
+
+      // Wait for UI update after parsing
+      await this.waitForRender();
+
+      // Perform diff comparison
+      console.log('⚡ Performing diff comparison...');
+      const diffResult = DiffEngine.compare(parsedA, parsedB);
+
+      console.log('Diff result:', diffResult);
+
+      // Hide loading overlay
+      this.showLoading(false);
+
+      // Wait for loading overlay to hide
+      await this.waitForRender();
+
+      // Display summary view
+      SummaryView.show(diffResult, parsedA, parsedB);
+    } catch (error) {
+      this.showLoading(false);
+      console.error('Error during comparison:', error);
+      alert(`Error: ${error.message}`);
+    }
+  },
+
+  /**
+   * Return to the file upload page
+   * Hides summary and diff views, resets file selection
+   */
+  backToUpload() {
+    // Hide summary
+    SummaryView.hide();
+
+    // Hide diff viewer
+    DiffViewer.hide();
+
+    // Show upload section
+    document.getElementById('uploadSection').style.display = 'block';
+
+    // Reset files
+    FileHandler.reset();
+  },
+
+  /**
+   * Return to the summary page from diff view
+   */
+  backToSummary() {
+    // Hide diff viewer
+    DiffViewer.hide();
+
+    // Show summary section
+    document.getElementById('summarySection').style.display = 'block';
+  },
+
+  /**
+   * Show or hide the loading overlay
+   * @param {boolean} show - True to show, false to hide
+   */
+  showLoading(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = show ? 'flex' : 'none';
+  },
 };
 
-// 當 DOM 加載完成後初始化
+// Initialize app when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+  App.init();
 });
 
-// 防止意外關閉頁面時丟失數據
+// Prevent accidental page close when files are loaded
 window.addEventListener('beforeunload', (e) => {
-    if (FileHandler.fileA || FileHandler.fileB) {
-        e.preventDefault();
-        e.returnValue = '確定要離開？未保存的比較結果將丟失。';
-    }
+  if (FileHandler.fileA || FileHandler.fileB) {
+    e.preventDefault();
+    e.returnValue = 'Are you sure you want to leave? Unsaved comparison results will be lost.';
+  }
 });

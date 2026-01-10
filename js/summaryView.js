@@ -57,12 +57,18 @@ const SummaryView = {
 
     // 2. Renamed sheets
     sheetChanges.renamed.forEach((rename) => {
+      // 🔥 檢查 renamed sheet 是否有內容變更
+      const diff = cellDiffs[rename.to]; // 使用新名稱獲取 cellDiff
+      const hasContentChanges = diff && diff.changes.length > 0;
+
       allSheets.push({
         name: `${rename.from} → ${rename.to}`,
         originalName: rename.from,
         newName: rename.to,
         status: 'renamed',
         confidence: Math.round(rename.confidence * 100),
+        changeCount: hasContentChanges ? diff.totalChanges : 0, // 🔥 新增
+        hasContentChanges: hasContentChanges, // 🔥 新增標記
         canView: true,
       });
     });
@@ -106,6 +112,7 @@ const SummaryView = {
    * @param {string} sheet.status - Sheet status: 'unchanged', 'modified', 'added', 'removed', 'renamed'
    * @param {number} [sheet.changeCount] - Number of changes (for modified sheets)
    * @param {number} [sheet.confidence] - Similarity confidence (for renamed sheets)
+   * @param {boolean} [sheet.hasContentChanges] - Whether renamed sheet has content changes
    * @param {boolean} sheet.canView - Whether the sheet can be viewed
    * @param {string} [sheet.viewSide] - Which side to view ('A' or 'B')
    * @returns {HTMLElement} Sheet item element
@@ -173,7 +180,13 @@ const SummaryView = {
       case 'removed':
         return 'Sheet Removed';
       case 'renamed':
-        return `Renamed (${sheet.confidence}% Similar)`;
+        // 🔥 如果有內容變更，顯示兩個標籤
+        if (sheet.hasContentChanges) {
+          // return `Renamed (${sheet.confidence}% Similar) + ${sheet.changeCount} changes`;
+          return `Renamed + ${sheet.changeCount} changes`; /* Do not show confidence level */
+        }
+        // return `Renamed (${sheet.confidence}% Similar)`;
+        return `Renamed`; /* Do not show confidence level */
       default:
         return '';
     }

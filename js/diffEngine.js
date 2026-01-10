@@ -1,4 +1,4 @@
-// diffEngine.js - Diff algorithm core engine
+// diffEngine.js - Diff algorithm core engine (FIXED)
 
 const DiffEngine = {
   /**
@@ -30,6 +30,15 @@ const DiffEngine = {
 
       const cellDiff = this.compareCells(sheetA, sheetB);
       result.cellDiffs[sheetName] = cellDiff;
+    });
+
+    // Also compare contents for renamed sheets!
+    result.sheetChanges.renamed.forEach((rename) => {
+      const sheetA = parsedFileA.sheets.find((s) => s.name === rename.from);
+      const sheetB = parsedFileB.sheets.find((s) => s.name === rename.to);
+
+      const cellDiff = this.compareCells(sheetA, sheetB);
+      result.cellDiffs[rename.to] = cellDiff; // Use new name as key
     });
 
     // Calculate statistics
@@ -98,7 +107,7 @@ const DiffEngine = {
    */
   detectRenames(removedNames, addedNames, sheetsA, sheetsB) {
     const renames = [];
-    const threshold = 0.85; // Similarity threshold (85%)
+    const threshold = 0.8; //  Lowered from 0.85 to 0.80
 
     removedNames.forEach((oldName) => {
       const oldSheet = sheetsA.find((s) => s.name === oldName);
@@ -107,6 +116,8 @@ const DiffEngine = {
         const newSheet = sheetsB.find((s) => s.name === newName);
 
         const similarity = this.calculateSheetSimilarity(oldSheet, newSheet);
+
+        console.log(`🔍 Comparing "${oldName}" vs "${newName}": ${(similarity * 100).toFixed(2)}%`);
 
         if (similarity >= threshold) {
           renames.push({

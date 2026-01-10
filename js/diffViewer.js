@@ -1,4 +1,4 @@
-// diffViewer.js - Diff Viewer Module
+// diffViewer.js - Diff Viewer Module (FIXED)
 
 const DiffViewer = {
   currentDiffResult: null,
@@ -372,7 +372,7 @@ const DiffViewer = {
       { passive: true }
     );
 
-    console.log('✅ Synchronized scrolling set up (separate vertical/horizontal)!');
+    console.log('✅ Synchronized scrolling set up!');
   },
 
   /**
@@ -398,7 +398,11 @@ const DiffViewer = {
       const rename = this.currentDiffResult.sheetChanges.renamed.find((r) => r.to === sheetName);
 
       if (rename) {
-        const cellDiff = this.currentDiffResult.cellDiffs[sheetName];
+        // 🔥 FIX 4: Use new name to get cellDiff
+        const cellDiff = this.currentDiffResult.cellDiffs[rename.to];
+
+        console.log('📊 Renamed sheet cell diff:', cellDiff);
+
         this.renderTable(tableA, rename.from, this.currentFileA, cellDiff, 'comparison');
         this.renderTable(tableB, rename.to, this.currentFileB, cellDiff, 'comparison');
       }
@@ -443,6 +447,12 @@ const DiffViewer = {
         console.log('✅ mouseleave triggered');
         self.hideTooltip();
       });
+
+      td.addEventListener('mousemove', function (e) {
+        if (self.tooltipElement && self.tooltipElement.classList.contains('visible')) {
+          self.updateTooltipPosition(e.clientX, e.clientY);
+        }
+      });
     });
 
     console.log('✅ Tooltip events rebound,', document.querySelectorAll('td[data-tooltip]').length, 'cells total');
@@ -484,6 +494,7 @@ const DiffViewer = {
     let diffMap = null;
     if (cellDiff && mode === 'comparison') {
       diffMap = DiffEngine.createCellDiffMap(cellDiff.changes);
+      console.log(`🗺️ DiffMap created for ${sheetName}:`, diffMap.size, 'changes');
     }
 
     tableElement.innerHTML = '';

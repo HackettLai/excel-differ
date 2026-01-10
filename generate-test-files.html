@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel 測試文件生成器 - 進階版</title>
+    <title>重命名檢測測試 - 不同內容類型</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -17,17 +17,15 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
         .container {
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
+            max-width: 1200px;
             width: 100%;
+            margin: 0 auto;
             padding: 40px;
         }
 
@@ -38,62 +36,51 @@
             font-size: 2em;
         }
 
-        .section {
+        .test-section {
             margin-bottom: 30px;
             padding: 20px;
             background: #f8f9fa;
             border-radius: 10px;
         }
 
-        .section h2 {
+        .test-section h2 {
             color: #667eea;
             margin-bottom: 15px;
             font-size: 1.3em;
         }
 
-        .scenario-list {
-            list-style: none;
-            padding-left: 0;
+        .test-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
         }
 
-        .scenario-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
+        .test-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .test-card ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .test-card li {
+            padding: 5px 0;
             line-height: 1.6;
         }
 
-        .scenario-list li:last-child {
-            border-bottom: none;
-        }
-
-        .highlight {
-            background: #fff3cd;
-            padding: 15px;
-            border-left: 4px solid #ffc107;
-            border-radius: 5px;
-            margin-top: 15px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card strong {
-            display: block;
-            color: #667eea;
-            font-size: 1.1em;
-            margin-bottom: 5px;
+        .similarity {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
         }
 
         .buttons {
@@ -121,14 +108,30 @@
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
-        button:active {
-            transform: translateY(0);
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            margin-top: 15px;
         }
 
-        .download-all {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            font-size: 1.2em;
-            padding: 18px 40px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
         }
 
         .emoji {
@@ -139,372 +142,404 @@
 </head>
 <body>
     <div class="container">
-        <h1><span class="emoji">📊</span>Excel 測試文件生成器 - 進階版</h1>
+        <h1><span class="emoji">🔬</span>重命名檢測測試 - 不同內容類型</h1>
         
-        <div class="section">
-            <h2>測試場景說明：</h2>
-            
-            <h3><span class="emoji">📝</span>Sheet1</h3>
-            <ul class="scenario-list">
-                <li>- 完整測試場景 (50 行數據)：</li>
-                <li><span class="emoji">✏️</span> 修改的儲存格 (第 5, 10, 15 行)</li>
-                <li><span class="emoji">🔴</span> <strong>個別刪除的儲存格 (前 10 行內)</strong></li>
-                <li><span class="emoji">🟢</span> <strong>個別新增的儲存格 (前 10 行內)</strong></li>
-                <li><span class="emoji">➕</span> 新增的行 (File B 多 5 行)</li>
-                <li><span class="emoji">❌</span> 刪除的行 (File A 有但 File B 沒有的 3 行)</li>
-                <li><span class="emoji">➕</span> 新增的列 (File B 多 2 列)</li>
-                <li><span class="emoji">❌</span> 刪除的列 (File A 有但 File B 沒有的 1 列)</li>
-                <li><span class="emoji">✅</span> 大量未變化的內容</li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">📊</span>DataSheet</h3>
-            <ul class="scenario-list">
-                <li>- 大量數據測試 (100 行 × 15 列)</li>
-                <li><span class="emoji">🔴</span> <strong>個別刪除的儲存格 (前 10 行內)</strong></li>
-                <li><span class="emoji">🟢</span> <strong>個別新增的儲存格 (前 10 行內)</strong></li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">➕</span>NewReport</h3>
-            <ul class="scenario-list">
-                <li>- File B 新增的 sheet</li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">❌</span>OldReport</h3>
-            <ul class="scenario-list">
-                <li>- File A 被刪除的 sheet</li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">🔄</span>Sales → Revenue</h3>
-            <ul class="scenario-list">
-                <li>- 重命名測試 (95%+ 相似度)</li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">🔄</span>Q1Data → Q1_2024</h3>
-            <ul class="scenario-list">
-                <li>- 另一個重命名測試 (88% 相似度)</li>
-            </ul>
-
-            <h3 style="margin-top: 20px;"><span class="emoji">📋</span>Summary</h3>
-            <ul class="scenario-list">
-                <li>- 兩個文件相同的 sheet</li>
-            </ul>
+        <div class="test-section">
+            <h2>測試目的：</h2>
+            <p>測試不同類型的表格內容是否會影響重命名檢測的準確度</p>
         </div>
 
-        <div class="section">
-            <h2>測試覆蓋率：</h2>
-            <div class="stats">
-                <div class="stat-card">
-                    <strong>新增：</strong>
-                    1 sheet + 5 rows + 2 cols + <span style="color: #28a745;">cells</span>
-                </div>
-                <div class="stat-card">
-                    <strong>刪除：</strong>
-                    1 sheet + 3 rows + 1 col + <span style="color: #dc3545;">cells</span>
-                </div>
-                <div class="stat-card">
-                    <strong>修改：</strong>
-                    30+ cells
-                </div>
-                <div class="stat-card">
-                    <strong>重命名：</strong>
-                    2 sheets
-                </div>
-                <div class="stat-card">
-                    <strong>總數據量：</strong>
-                    200+ rows
-                </div>
-                <div class="stat-card">
-                    <strong>Scroll 測試：</strong>
-                    <span class="emoji">✅</span> 充足
-                </div>
+        <div class="test-section">
+            <h2>測試案例：</h2>
+
+            <div class="test-card">
+                <h3>🔢 案例1: 數字密集型數據</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>Numbers</strong> → <strong>Digits</strong></li>
+                    <li>內容: 100行 × 10列的隨機數字</li>
+                    <li>修改: 僅2個數字不同 <span class="similarity">98% 相似度</span></li>
+                </ul>
             </div>
 
-            <div class="highlight">
-                <strong><span class="emoji">🎯</span> 新增功能：</strong>
-                在 Sheet1 和 DataSheet 的前 10 行中，加入了個別儲存格的新增和刪除測試，
-                讓你可以清楚看到紅色（刪除）和綠色（新增）的 highlight 效果！
+            <div class="test-card">
+                <h3>📝 案例2: 文字密集型數據</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>TextData</strong> → <strong>StringData</strong></li>
+                    <li>內容: 50行文字描述（長字串）</li>
+                    <li>修改: 僅3個詞不同 <span class="similarity">94% 相似度</span></li>
+                </ul>
             </div>
+
+            <div class="test-card">
+                <h3>📅 案例3: 日期時間型數據</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>TimeLog</strong> → <strong>DateLog</strong></li>
+                    <li>內容: 30行日期時間記錄</li>
+                    <li>修改: 僅2個日期不同 <span class="similarity">93% 相似度</span></li>
+                </ul>
+            </div>
+
+            <div class="test-card">
+                <h3>🎨 案例4: 混合型數據</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>MixedData</strong> → <strong>CombinedData</strong></li>
+                    <li>內容: 數字+文字+日期+布林值</li>
+                    <li>修改: 僅4個值不同 <span class="similarity">92% 相似度</span></li>
+                </ul>
+            </div>
+
+            <div class="test-card">
+                <h3>🔳 案例5: 稀疏數據（多空格）</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>SparseData</strong> → <strong>SparseTable</strong></li>
+                    <li>內容: 大量空儲存格的表格</li>
+                    <li>修改: 僅2個非空值不同 <span class="similarity">95% 相似度</span></li>
+                </ul>
+            </div>
+
+            <div class="test-card">
+                <h3>📊 案例6: 公式密集型（純值）</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>Calculations</strong> → <strong>FormulasResult</strong></li>
+                    <li>內容: 模擬公式計算結果（純數值）</li>
+                    <li>修改: 僅3個計算結果不同 <span class="similarity">91% 相似度</span></li>
+                </ul>
+            </div>
+
+            <div class="test-card">
+                <h3>🌐 案例7: 多語言文字</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>中文數據</strong> → <strong>中文資料</strong></li>
+                    <li>內容: 中文、英文、數字混合</li>
+                    <li>修改: 僅2個中文詞不同 <span class="similarity">96% 相似度</span></li>
+                </ul>
+            </div>
+
+            <div class="test-card">
+                <h3>📏 案例8: 極小表格</h3>
+                <ul>
+                    <li>Sheet名稱: <strong>TinySheet</strong> → <strong>SmallSheet</strong></li>
+                    <li>內容: 僅5行 × 3列</li>
+                    <li>修改: 僅1個值不同 <span class="similarity">93% 相似度</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>預期結果：</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>案例</th>
+                        <th>內容類型</th>
+                        <th>數據量</th>
+                        <th>相似度</th>
+                        <th>應該檢測為重命名？</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>案例1</td>
+                        <td>數字密集</td>
+                        <td>1000 cells</td>
+                        <td>98%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例2</td>
+                        <td>文字密集</td>
+                        <td>200 cells</td>
+                        <td>94%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例3</td>
+                        <td>日期時間</td>
+                        <td>120 cells</td>
+                        <td>93%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例4</td>
+                        <td>混合型</td>
+                        <td>300 cells</td>
+                        <td>92%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例5</td>
+                        <td>稀疏數據</td>
+                        <td>400 cells (多空)</td>
+                        <td>95%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例6</td>
+                        <td>公式結果</td>
+                        <td>200 cells</td>
+                        <td>91%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例7</td>
+                        <td>多語言</td>
+                        <td>150 cells</td>
+                        <td>96%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                    <tr>
+                        <td>案例8</td>
+                        <td>極小表格</td>
+                        <td>15 cells</td>
+                        <td>93%</td>
+                        <td>✅ 是</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="highlight">
+            <strong><span class="emoji">💡</span> 重點：</strong>
+            這個測試將幫助你了解：
+            <ul style="margin-top: 10px; padding-left: 20px;">
+                <li>✅ 數字、文字、日期等不同數據類型是否影響檢測</li>
+                <li>✅ 稀疏數據（多空格）是否影響相似度計算</li>
+                <li>✅ 表格大小（從15個cell到1000個cell）是否影響檢測</li>
+                <li>✅ 多語言文字是否影響檢測準確度</li>
+            </ul>
         </div>
 
         <div class="buttons">
             <button onclick="downloadFileA()">
-                <span class="emoji">📥</span> 下載 File A (Original)
+                <span class="emoji">📥</span> 下載 File A
             </button>
             <button onclick="downloadFileB()">
-                <span class="emoji">📥</span> 下載 File B (New Version)
+                <span class="emoji">📥</span> 下載 File B
             </button>
-            <button class="download-all" onclick="downloadBoth()">
+            <button onclick="downloadBoth()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); font-size: 1.2em; padding: 18px 40px;">
                 <span class="emoji">⚡</span> 一鍵下載兩個文件
             </button>
         </div>
     </div>
 
     <script>
-        // Generate test data for Sheet1
-        function generateSheet1Data(isFileB = false) {
-            const data = [];
-            const headers = ['ID', 'Name', 'Department', 'Salary', 'Status'];
-            
-            // Add extra columns in File B
-            if (isFileB) {
-                headers.push('Email', 'Phone');
-            } else {
-                headers.push('Notes'); // This column will be deleted in File B
-            }
-            
-            data.push(headers);
-
-            // Generate 50 rows
-            for (let i = 1; i <= 50; i++) {
-                // Skip rows 12, 28, 35 in File B (deleted rows)
-                if (isFileB && [12, 28, 35].includes(i)) continue;
-                
-                const row = [
-                    i,
-                    `Employee ${i}`,
-                    `Dept ${(i % 5) + 1}`,
-                    50000 + (i * 1000),
-                    'Active'
-                ];
-
-                // Modify specific cells
-                if (i === 5) {
-                    row[3] = isFileB ? 99999 : row[3]; // Modified salary
-                }
-                if (i === 10) {
-                    row[4] = isFileB ? 'Inactive' : 'Active'; // Modified status
-                }
-                if (i === 15) {
-                    row[1] = isFileB ? 'John Smith (Updated)' : `Employee ${i}`; // Modified name
-                }
-
-                // **NEW: Individual cell deletions and additions in first 10 rows**
-                if (i <= 10) {
-                    if (i === 3) {
-                        // Row 3: File A has Department, File B leaves it empty (deleted cell)
-                        row[2] = isFileB ? '' : row[2];
-                    }
-                    if (i === 6) {
-                        // Row 6: File A has Salary, File B leaves it empty (deleted cell)
-                        row[3] = isFileB ? '' : row[3];
-                    }
-                    if (i === 4) {
-                        // Row 4: File B has new Status value, File A leaves it empty (added cell)
-                        row[4] = isFileB ? 'Pending' : '';
-                    }
-                    if (i === 8) {
-                        // Row 8: File B has new Department, File A leaves it empty (added cell)
-                        row[2] = isFileB ? 'New Dept' : '';
-                    }
-                }
-                
-                if (isFileB) {
-                    row.push(`emp${i}@company.com`, `555-${1000 + i}`); // New columns
-                } else {
-                    row.push(`Note for employee ${i}`); // Old column
-                }
-                
-                data.push(row);
-            }
-
-            // Add extra rows in File B
-            if (isFileB) {
-                for (let i = 51; i <= 55; i++) {
-                    data.push([
-                        i,
-                        `New Employee ${i}`,
-                        `Dept ${(i % 5) + 1}`,
-                        60000,
-                        'Active',
-                        `emp${i}@company.com`,
-                        `555-${1000 + i}`
-                    ]);
-                }
-            }
-
-            return data;
-        }
-
-        // Generate test data for DataSheet
-        function generateDataSheetData(isFileB = false) {
-            const data = [];
-            const headers = ['Row', 'Col1', 'Col2', 'Col3', 'Col4', 'Col5', 'Col6', 
-                           'Col7', 'Col8', 'Col9', 'Col10', 'Col11', 'Col12', 'Col13', 'Col14'];
-            data.push(headers);
-
+        // 案例1: 數字密集型
+        function generateNumbersData(isFileB = false) {
+            const data = [['Col1', 'Col2', 'Col3', 'Col4', 'Col5', 'Col6', 'Col7', 'Col8', 'Col9', 'Col10']];
             for (let i = 1; i <= 100; i++) {
-                const row = [i];
-                for (let j = 1; j <= 14; j++) {
-                    row.push(`Data_${i}_${j}`);
+                const row = [];
+                for (let j = 1; j <= 10; j++) {
+                    let value = 1000 + i * 10 + j;
+                    // 僅修改2個值
+                    if (isFileB && i === 25 && j === 5) value += 100;
+                    if (isFileB && i === 75 && j === 8) value -= 50;
+                    row.push(value);
                 }
+                data.push(row);
+            }
+            return data;
+        }
 
-                // **NEW: Individual cell deletions and additions in first 10 rows**
-                if (i <= 10) {
-                    if (i === 2) {
-                        // Row 2: File A has Col3, File B deletes it
-                        row[3] = isFileB ? '' : row[3];
-                    }
-                    if (i === 5) {
-                        // Row 5: File A has Col7, File B deletes it
-                        row[7] = isFileB ? '' : row[7];
-                    }
-                    if (i === 7) {
-                        // Row 7: File B adds Col5, File A doesn't have it
-                        row[5] = isFileB ? 'NEW_DATA_7_5' : '';
-                    }
-                    if (i === 9) {
-                        // Row 9: File B adds Col10, File A doesn't have it
-                        row[10] = isFileB ? 'NEW_DATA_9_10' : '';
-                    }
+        // 案例2: 文字密集型
+        function generateTextData(isFileB = false) {
+            const data = [['Description', 'Category', 'Notes', 'Status']];
+            const descriptions = [
+                'This is a detailed description of the product features and specifications',
+                'Customer feedback indicates high satisfaction with the service quality',
+                'The quarterly report shows significant improvement in all key metrics',
+                'Implementation of new procedures has streamlined the workflow process',
+                'Analysis of market trends reveals emerging opportunities for growth'
+            ];
+            
+            for (let i = 0; i < 50; i++) {
+                let desc = descriptions[i % 5];
+                let category = `Category ${(i % 10) + 1}`;
+                let notes = `Additional notes for item ${i + 1}`;
+                let status = 'Active';
+                
+                // 僅修改3個詞
+                if (isFileB && i === 10) desc = desc.replace('detailed', 'comprehensive');
+                if (isFileB && i === 25) category = 'Updated Category';
+                if (isFileB && i === 40) notes = notes.replace('Additional', 'Important');
+                
+                data.push([desc, category, notes, status]);
+            }
+            return data;
+        }
+
+        // 案例3: 日期時間型
+        function generateDateData(isFileB = false) {
+            const data = [['Date', 'Time', 'Timestamp', 'Day']];
+            const baseDate = new Date('2024-01-01');
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(baseDate);
+                date.setDate(date.getDate() + i);
+                
+                let dateStr = date.toISOString().split('T')[0];
+                let timeStr = `${8 + (i % 12)}:00:00`;
+                let timestamp = date.getTime();
+                let day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i % 7];
+                
+                // 僅修改2個日期
+                if (isFileB && i === 10) {
+                    dateStr = '2024-01-12';
                 }
+                if (isFileB && i === 20) {
+                    timeStr = '15:30:00';
+                }
+                
+                data.push([dateStr, timeStr, timestamp, day]);
+            }
+            return data;
+        }
+
+        // 案例4: 混合型數據
+        function generateMixedData(isFileB = false) {
+            const data = [['ID', 'Name', 'Amount', 'Date', 'Active', 'Score']];
+            
+            for (let i = 1; i <= 50; i++) {
+                let id = i;
+                let name = `Item ${i}`;
+                let amount = 1000 + i * 50;
+                let date = `2024-01-${String(i % 28 + 1).padStart(2, '0')}`;
+                let active = i % 2 === 0;
+                let score = 50 + (i % 50);
+                
+                // 僅修改4個值
+                if (isFileB && i === 10) name = 'Modified Item 10';
+                if (isFileB && i === 20) amount = 9999;
+                if (isFileB && i === 30) date = '2024-02-01';
+                if (isFileB && i === 40) score = 100;
+                
+                data.push([id, name, amount, date, active, score]);
+            }
+            return data;
+        }
+
+        // 案例5: 稀疏數據
+        function generateSparseData(isFileB = false) {
+            const data = [['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']];
+            
+            for (let i = 1; i <= 40; i++) {
+                const row = new Array(10).fill('');
+                // 只有少數儲存格有值
+                if (i % 4 === 0) row[0] = i;
+                if (i % 5 === 0) row[2] = `Value ${i}`;
+                if (i % 6 === 0) row[5] = i * 100;
+                if (i % 7 === 0) row[8] = 'X';
+                
+                // 僅修改2個非空值
+                if (isFileB && i === 20) row[2] = 'Changed Value';
+                if (isFileB && i === 30) row[5] = 99999;
                 
                 data.push(row);
             }
-
             return data;
         }
 
-        // Generate renamed sheet data (Sales → Revenue)
-        function generateSalesData(isFileB = false) {
-            const data = [];
-            data.push(['Month', 'Product', 'Sales', 'Profit']);
+        // 案例6: 公式計算結果
+        function generateCalculationsData(isFileB = false) {
+            const data = [['Input', 'Double', 'Square', 'Sum', 'Avg']];
             
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-            const products = ['Product A', 'Product B', 'Product C'];
-            
-            months.forEach(month => {
-                products.forEach(product => {
-                    data.push([
-                        month,
-                        product,
-                        Math.floor(Math.random() * 10000),
-                        Math.floor(Math.random() * 5000)
-                    ]);
-                });
-            });
+            for (let i = 1; i <= 40; i++) {
+                let input = i;
+                let double = i * 2;
+                let square = i * i;
+                let sum = i + (i * 2) + (i * i);
+                let avg = sum / 3;
+                
+                // 僅修改3個計算結果
+                if (isFileB && i === 15) double = 999;
+                if (isFileB && i === 25) square = 888;
+                if (isFileB && i === 35) avg = 777;
+                
+                data.push([input, double, square, sum, avg.toFixed(2)]);
+            }
+            return data;
+        }
 
-            // Add some variations in File B to ensure 95%+ similarity
+        // 案例7: 多語言文字
+        function generateMultiLangData(isFileB = false) {
+            const data = [['中文', 'English', '數字', '混合']];
+            
+            const chineseWords = ['產品', '服務', '品質', '客戶', '銷售', '利潤', '市場', '分析', '報告', '數據'];
+            const englishWords = ['Product', 'Service', 'Quality', 'Customer', 'Sales', 'Profit', 'Market', 'Analysis', 'Report', 'Data'];
+            
+            for (let i = 0; i < 30; i++) {
+                let chinese = chineseWords[i % 10];
+                let english = englishWords[i % 10];
+                let number = 1000 + i * 100;
+                let mixed = `${chinese}-${english}-${number}`;
+                
+                // 僅修改2個中文詞
+                if (isFileB && i === 10) chinese = '更新後的產品';
+                if (isFileB && i === 20) mixed = '新的混合數據-Updated-2500';
+                
+                data.push([chinese, english, number, mixed]);
+            }
+            return data;
+        }
+
+        // 案例8: 極小表格
+        function generateTinyData(isFileB = false) {
+            const data = [
+                ['A', 'B', 'C'],
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [10, 11, 12],
+                [13, 14, 15]
+            ];
+            
+            // 僅修改1個值
             if (isFileB) {
-                data[5][2] = data[5][2] + 100; // Slightly different value
-                data[10][3] = data[10][3] + 50;
+                data[3][1] = 999; // 修改第3行第2列
             }
-
-            return data;
-        }
-
-        // Generate another renamed sheet (Q1Data → Q1_2024)
-        function generateQ1Data(isFileB = false) {
-            const data = [];
-            data.push(['Week', 'Revenue', 'Expenses', 'Net']);
             
-            for (let i = 1; i <= 13; i++) {
-                const revenue = 10000 + Math.floor(Math.random() * 5000);
-                const expenses = 7000 + Math.floor(Math.random() * 3000);
-                data.push([
-                    `Week ${i}`,
-                    revenue,
-                    expenses,
-                    revenue - expenses
-                ]);
-            }
-
-            // Add more variations for ~88% similarity
-            if (isFileB) {
-                data[3][1] = data[3][1] + 500;
-                data[7][2] = data[7][2] + 300;
-                data[11][3] = data[11][3] + 200;
-            }
-
             return data;
         }
 
-        // Generate unchanged sheet
-        function generateSummaryData() {
-            const data = [];
-            data.push(['Category', 'Count', 'Percentage']);
-            data.push(['Active', 45, '90%']);
-            data.push(['Inactive', 5, '10%']);
-            data.push(['Total', 50, '100%']);
-            return data;
-        }
-
-        // Generate File A
+        // 生成 File A
         function generateFileA() {
             const wb = XLSX.utils.book_new();
             
-            // Sheet1
-            const sheet1 = XLSX.utils.aoa_to_sheet(generateSheet1Data(false));
-            XLSX.utils.book_append_sheet(wb, sheet1, 'Sheet1');
-            
-            // DataSheet
-            const dataSheet = XLSX.utils.aoa_to_sheet(generateDataSheetData(false));
-            XLSX.utils.book_append_sheet(wb, dataSheet, 'DataSheet');
-            
-            // OldReport (will be deleted in File B)
-            const oldReport = XLSX.utils.aoa_to_sheet([
-                ['This sheet', 'will be', 'deleted'],
-                ['in File B', '', '']
-            ]);
-            XLSX.utils.book_append_sheet(wb, oldReport, 'OldReport');
-            
-            // Sales (will be renamed to Revenue in File B)
-            const sales = XLSX.utils.aoa_to_sheet(generateSalesData(false));
-            XLSX.utils.book_append_sheet(wb, sales, 'Sales');
-            
-            // Q1Data (will be renamed to Q1_2024 in File B)
-            const q1Data = XLSX.utils.aoa_to_sheet(generateQ1Data(false));
-            XLSX.utils.book_append_sheet(wb, q1Data, 'Q1Data');
-            
-            // Summary (unchanged)
-            const summary = XLSX.utils.aoa_to_sheet(generateSummaryData());
-            XLSX.utils.book_append_sheet(wb, summary, 'Summary');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateNumbersData(false)), 'Numbers');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateTextData(false)), 'TextData');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateDateData(false)), 'TimeLog');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateMixedData(false)), 'MixedData');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateSparseData(false)), 'SparseData');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateCalculationsData(false)), 'Calculations');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateMultiLangData(false)), '中文數據');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateTinyData(false)), 'TinySheet');
             
             return wb;
         }
 
-        // Generate File B
+        // 生成 File B
         function generateFileB() {
             const wb = XLSX.utils.book_new();
             
-            // Sheet1 (with modifications)
-            const sheet1 = XLSX.utils.aoa_to_sheet(generateSheet1Data(true));
-            XLSX.utils.book_append_sheet(wb, sheet1, 'Sheet1');
-            
-            // DataSheet
-            const dataSheet = XLSX.utils.aoa_to_sheet(generateDataSheetData(true));
-            XLSX.utils.book_append_sheet(wb, dataSheet, 'DataSheet');
-            
-            // NewReport (added in File B)
-            const newReport = XLSX.utils.aoa_to_sheet([
-                ['This is', 'a new', 'sheet'],
-                ['added in', 'File B', '!']
-            ]);
-            XLSX.utils.book_append_sheet(wb, newReport, 'NewReport');
-            
-            // Revenue (renamed from Sales)
-            const revenue = XLSX.utils.aoa_to_sheet(generateSalesData(true));
-            XLSX.utils.book_append_sheet(wb, revenue, 'Revenue');
-            
-            // Q1_2024 (renamed from Q1Data)
-            const q1_2024 = XLSX.utils.aoa_to_sheet(generateQ1Data(true));
-            XLSX.utils.book_append_sheet(wb, q1_2024, 'Q1_2024');
-            
-            // Summary (unchanged)
-            const summary = XLSX.utils.aoa_to_sheet(generateSummaryData());
-            XLSX.utils.book_append_sheet(wb, summary, 'Summary');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateNumbersData(true)), 'Digits');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateTextData(true)), 'StringData');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateDateData(true)), 'DateLog');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateMixedData(true)), 'CombinedData');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateSparseData(true)), 'SparseTable');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateCalculationsData(true)), 'FormulasResult');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateMultiLangData(true)), '中文資料');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generateTinyData(true)), 'SmallSheet');
             
             return wb;
         }
 
-        // Download functions
         function downloadFileA() {
             const wb = generateFileA();
-            XLSX.writeFile(wb, 'Test_File_A_Original.xlsx');
+            XLSX.writeFile(wb, 'Rename_Test_FileA.xlsx');
         }
 
         function downloadFileB() {
             const wb = generateFileB();
-            XLSX.writeFile(wb, 'Test_File_B_NewVersion.xlsx');
+            XLSX.writeFile(wb, 'Rename_Test_FileB.xlsx');
         }
 
         function downloadBoth() {

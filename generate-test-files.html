@@ -13,43 +13,42 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
 
         .container {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 900px;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
         }
 
         h1 {
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 30px;
-            font-size: 32px;
-        }
-
-        .scenario-box {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-
-        .scenario-box h2 {
             color: #333;
-            font-size: 18px;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .section h2 {
+            color: #667eea;
             margin-bottom: 15px;
+            font-size: 1.3em;
         }
 
         .scenario-list {
@@ -59,21 +58,50 @@
 
         .scenario-list li {
             padding: 8px 0;
-            color: #555;
-            font-size: 15px;
+            border-bottom: 1px solid #e9ecef;
             line-height: 1.6;
         }
 
-        .scenario-list li strong {
-            color: #667eea;
-            font-weight: 600;
+        .scenario-list li:last-child {
+            border-bottom: none;
         }
 
-        .button-group {
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card strong {
+            display: block;
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .buttons {
             display: flex;
             gap: 15px;
-            flex-wrap: wrap;
             justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
         }
 
         button {
@@ -82,10 +110,9 @@
             border: none;
             padding: 15px 30px;
             border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 1.1em;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
@@ -98,371 +125,393 @@
             transform: translateY(0);
         }
 
-        button.both {
+        .download-all {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-        }
-
-        button.both:hover {
-            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+            font-size: 1.2em;
+            padding: 18px 40px;
         }
 
         .emoji {
-            margin-right: 8px;
-        }
-
-        .stats {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .stat-item {
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .stat-item strong {
-            color: #667eea;
+            font-size: 1.2em;
+            margin-right: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Excel 測試文件生成器 - 進階版</h1>
+        <h1><span class="emoji">📊</span>Excel 測試文件生成器 - 進階版</h1>
         
-        <div class="scenario-box">
+        <div class="section">
             <h2>測試場景說明：</h2>
+            
+            <h3><span class="emoji">📝</span>Sheet1</h3>
             <ul class="scenario-list">
-                <li><strong>📝 Sheet1</strong> - 完整測試場景 (50 行數據)：
-                    <ul style="margin-left: 20px; margin-top: 5px;">
-                        <li>✏️ 修改的儲存格 (第 5, 10, 15 行)</li>
-                        <li>➕ 新增的行 (File B 多 5 行)</li>
-                        <li>❌ 刪除的行 (File A 有但 File B 沒有的 3 行)</li>
-                        <li>➕ 新增的列 (File B 多 2 列)</li>
-                        <li>❌ 刪除的列 (File A 有但 File B 沒有的 1 列)</li>
-                        <li>✅ 大量未變化的內容</li>
-                    </ul>
-                </li>
-                <li><strong>📊 DataSheet</strong> - 大量數據測試 (100 行 × 15 列)</li>
-                <li><strong>➕ NewReport</strong> - File B 新增的 sheet</li>
-                <li><strong>❌ OldReport</strong> - File A 被刪除的 sheet</li>
-                <li><strong>🔄 Sales → Revenue</strong> - 重命名測試 (95%+ 相似度)</li>
-                <li><strong>🔄 Q1Data → Q1_2024</strong> - 另一個重命名測試 (88% 相似度)</li>
-                <li><strong>📋 Summary</strong> - 兩個文件相同的 sheet</li>
+                <li>- 完整測試場景 (50 行數據)：</li>
+                <li><span class="emoji">✏️</span> 修改的儲存格 (第 5, 10, 15 行)</li>
+                <li><span class="emoji">🔴</span> <strong>個別刪除的儲存格 (前 10 行內)</strong></li>
+                <li><span class="emoji">🟢</span> <strong>個別新增的儲存格 (前 10 行內)</strong></li>
+                <li><span class="emoji">➕</span> 新增的行 (File B 多 5 行)</li>
+                <li><span class="emoji">❌</span> 刪除的行 (File A 有但 File B 沒有的 3 行)</li>
+                <li><span class="emoji">➕</span> 新增的列 (File B 多 2 列)</li>
+                <li><span class="emoji">❌</span> 刪除的列 (File A 有但 File B 沒有的 1 列)</li>
+                <li><span class="emoji">✅</span> 大量未變化的內容</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">📊</span>DataSheet</h3>
+            <ul class="scenario-list">
+                <li>- 大量數據測試 (100 行 × 15 列)</li>
+                <li><span class="emoji">🔴</span> <strong>個別刪除的儲存格 (前 10 行內)</strong></li>
+                <li><span class="emoji">🟢</span> <strong>個別新增的儲存格 (前 10 行內)</strong></li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">➕</span>NewReport</h3>
+            <ul class="scenario-list">
+                <li>- File B 新增的 sheet</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">❌</span>OldReport</h3>
+            <ul class="scenario-list">
+                <li>- File A 被刪除的 sheet</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">🔄</span>Sales → Revenue</h3>
+            <ul class="scenario-list">
+                <li>- 重命名測試 (95%+ 相似度)</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">🔄</span>Q1Data → Q1_2024</h3>
+            <ul class="scenario-list">
+                <li>- 另一個重命名測試 (88% 相似度)</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;"><span class="emoji">📋</span>Summary</h3>
+            <ul class="scenario-list">
+                <li>- 兩個文件相同的 sheet</li>
             </ul>
         </div>
 
-        <div class="stats">
-            <strong>測試覆蓋率：</strong>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <strong>新增：</strong> 1 sheet + 5 rows + 2 cols
+        <div class="section">
+            <h2>測試覆蓋率：</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <strong>新增：</strong>
+                    1 sheet + 5 rows + 2 cols + <span style="color: #28a745;">cells</span>
                 </div>
-                <div class="stat-item">
-                    <strong>刪除：</strong> 1 sheet + 3 rows + 1 col
+                <div class="stat-card">
+                    <strong>刪除：</strong>
+                    1 sheet + 3 rows + 1 col + <span style="color: #dc3545;">cells</span>
                 </div>
-                <div class="stat-item">
-                    <strong>修改：</strong> 30+ cells
+                <div class="stat-card">
+                    <strong>修改：</strong>
+                    30+ cells
                 </div>
-                <div class="stat-item">
-                    <strong>重命名：</strong> 2 sheets
+                <div class="stat-card">
+                    <strong>重命名：</strong>
+                    2 sheets
                 </div>
-                <div class="stat-item">
-                    <strong>總數據量：</strong> 200+ rows
+                <div class="stat-card">
+                    <strong>總數據量：</strong>
+                    200+ rows
                 </div>
-                <div class="stat-item">
-                    <strong>Scroll 測試：</strong> ✅ 充足
+                <div class="stat-card">
+                    <strong>Scroll 測試：</strong>
+                    <span class="emoji">✅</span> 充足
                 </div>
+            </div>
+
+            <div class="highlight">
+                <strong><span class="emoji">🎯</span> 新增功能：</strong>
+                在 Sheet1 和 DataSheet 的前 10 行中，加入了個別儲存格的新增和刪除測試，
+                讓你可以清楚看到紅色（刪除）和綠色（新增）的 highlight 效果！
             </div>
         </div>
 
-        <div class="button-group">
+        <div class="buttons">
             <button onclick="downloadFileA()">
-                <span class="emoji">📥</span>下載 File A (Original)
+                <span class="emoji">📥</span> 下載 File A (Original)
             </button>
             <button onclick="downloadFileB()">
-                <span class="emoji">📥</span>下載 File B (New Version)
+                <span class="emoji">📥</span> 下載 File B (New Version)
             </button>
-            <button class="both" onclick="downloadBoth()">
-                <span class="emoji">⚡</span>一鍵下載兩個文件
+            <button class="download-all" onclick="downloadBoth()">
+                <span class="emoji">⚡</span> 一鍵下載兩個文件
             </button>
         </div>
     </div>
 
     <script>
-        // 生成 File A 的數據
-        function generateFileA() {
-            const wb = XLSX.utils.book_new();
-
-            // ===== Sheet1 - 完整測試場景 (50 行) =====
-            const sheet1Data = [
-                ['姓名', '年齡', '部門', '薪資', '績效', '備註'],  // Header
-            ];
-
-            // 前 50 行基礎數據
-            for (let i = 1; i <= 50; i++) {
-                sheet1Data.push([
-                    `員工${i}`,
-                    20 + (i % 40),
-                    ['業務部', '研發部', '行政部', '財務部'][i % 4],
-                    30000 + i * 500,
-                    ['A', 'B', 'C'][i % 3],
-                    `這是第 ${i} 行的備註`
-                ]);
+        // Generate test data for Sheet1
+        function generateSheet1Data(isFileB = false) {
+            const data = [];
+            const headers = ['ID', 'Name', 'Department', 'Salary', 'Status'];
+            
+            // Add extra columns in File B
+            if (isFileB) {
+                headers.push('Email', 'Phone');
+            } else {
+                headers.push('Notes'); // This column will be deleted in File B
             }
+            
+            data.push(headers);
 
-            // 加入「會被刪除的 3 行」(File B 沒有)
-            sheet1Data.push(['待刪除1', 99, '臨時部門', 10000, 'D', '這行會被刪除']);
-            sheet1Data.push(['待刪除2', 99, '臨時部門', 10000, 'D', '這行會被刪除']);
-            sheet1Data.push(['待刪除3', 99, '臨時部門', 10000, 'D', '這行會被刪除']);
-
-            const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
-            XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1');
-
-            // ===== DataSheet - 大量數據 (100 行 × 15 列) =====
-            const dataSheetData = [
-                ['ID', 'Date', 'Product', 'Quantity', 'Price', 'Total', 'Region', 'Category', 'Status', 'Discount', 'Tax', 'Profit', 'Customer', 'Salesperson', 'Notes']
-            ];
-
-            for (let i = 1; i <= 100; i++) {
-                dataSheetData.push([
-                    `ID-${String(i).padStart(4, '0')}`,
-                    `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
-                    `Product-${(i % 10) + 1}`,
-                    Math.floor(Math.random() * 100) + 1,
-                    Math.floor(Math.random() * 1000) + 100,
-                    Math.floor(Math.random() * 100000) + 1000,
-                    ['North', 'South', 'East', 'West'][i % 4],
-                    ['Electronics', 'Clothing', 'Food', 'Books'][i % 4],
-                    ['Pending', 'Completed', 'Cancelled'][i % 3],
-                    `${(i % 20)}%`,
-                    `${(i % 10)}%`,
-                    Math.floor(Math.random() * 10000),
-                    `Customer-${i % 50}`,
-                    `Sales-${i % 10}`,
-                    `Note for row ${i}`
-                ]);
-            }
-
-            const ws2 = XLSX.utils.aoa_to_sheet(dataSheetData);
-            XLSX.utils.book_append_sheet(wb, ws2, 'DataSheet');
-
-            // ===== OldReport - 會被刪除的 sheet =====
-            const oldReportData = [
-                ['Old Item', 'Old Value'],
-                ['Item 1', 100],
-                ['Item 2', 200],
-                ['Item 3', 300]
-            ];
-            const ws3 = XLSX.utils.aoa_to_sheet(oldReportData);
-            XLSX.utils.book_append_sheet(wb, ws3, 'OldReport');
-
-            // ===== Sales - 會被重命名為 Revenue (95% 相似) =====
-            const salesData = [
-                ['產品', 'Q1', 'Q2', 'Q3', 'Q4', '總計'],
-                ['產品A', 1000, 1200, 1100, 1300, 4600],
-                ['產品B', 800, 900, 850, 950, 3500],
-                ['產品C', 1500, 1600, 1550, 1700, 6350],
-                ['產品D', 600, 650, 700, 750, 2700],
-                ['產品E', 900, 950, 980, 1020, 3850]
-            ];
-            const ws4 = XLSX.utils.aoa_to_sheet(salesData);
-            XLSX.utils.book_append_sheet(wb, ws4, 'Sales');
-
-            // ===== Q1Data - 會被重命名為 Q1_2024 (88% 相似) =====
-            const q1Data = [
-                ['Week', 'Revenue', 'Expenses', 'Profit'],
-                ['Week 1', 10000, 7000, 3000],
-                ['Week 2', 12000, 8000, 4000],
-                ['Week 3', 11000, 7500, 3500],
-                ['Week 4', 13000, 8500, 4500]
-            ];
-            const ws5 = XLSX.utils.aoa_to_sheet(q1Data);
-            XLSX.utils.book_append_sheet(wb, ws5, 'Q1Data');
-
-            // ===== Summary - 完全相同的 sheet =====
-            const summaryData = [
-                ['項目', '數值'],
-                ['總銷售額', 1000000],
-                ['總成本', 600000],
-                ['淨利潤', 400000],
-                ['員工人數', 50]
-            ];
-            const ws6 = XLSX.utils.aoa_to_sheet(summaryData);
-            XLSX.utils.book_append_sheet(wb, ws6, 'Summary');
-
-            return wb;
-        }
-
-        // 生成 File B 的數據
-        function generateFileB() {
-            const wb = XLSX.utils.book_new();
-
-            // ===== Sheet1 - 有修改、新增、刪除 =====
-            const sheet1Data = [
-                ['姓名', '年齡', '部門', '薪資', '績效', '備註', '入職日期', '聯絡電話'],  // 👈 新增 2 列
-            ];
-
-            // 前 50 行 (有部分修改)
+            // Generate 50 rows
             for (let i = 1; i <= 50; i++) {
+                // Skip rows 12, 28, 35 in File B (deleted rows)
+                if (isFileB && [12, 28, 35].includes(i)) continue;
+                
                 const row = [
-                    `員工${i}`,
-                    20 + (i % 40),
-                    ['業務部', '研發部', '行政部', '財務部'][i % 4],
-                    30000 + i * 500,
-                    ['A', 'B', 'C'][i % 3],
-                    `這是第 ${i} 行的備註`,
-                    `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,  // 新增列
-                    `09${String(i).padStart(8, '0')}`  // 新增列
+                    i,
+                    `Employee ${i}`,
+                    `Dept ${(i % 5) + 1}`,
+                    50000 + (i * 1000),
+                    'Active'
                 ];
 
-                // 🔴 修改部分行
+                // Modify specific cells
                 if (i === 5) {
-                    row[1] = 99;  // 修改年齡
-                    row[3] = 99999;  // 修改薪資
-                    row[5] = '**已修改**';
+                    row[3] = isFileB ? 99999 : row[3]; // Modified salary
                 }
                 if (i === 10) {
-                    row[2] = '新部門';  // 修改部門
-                    row[4] = 'S';  // 修改績效
+                    row[4] = isFileB ? 'Inactive' : 'Active'; // Modified status
                 }
                 if (i === 15) {
-                    row[0] = '**新姓名**';  // 修改姓名
+                    row[1] = isFileB ? 'John Smith (Updated)' : `Employee ${i}`; // Modified name
                 }
 
-                sheet1Data.push(row);
+                // **NEW: Individual cell deletions and additions in first 10 rows**
+                if (i <= 10) {
+                    if (i === 3) {
+                        // Row 3: File A has Department, File B leaves it empty (deleted cell)
+                        row[2] = isFileB ? '' : row[2];
+                    }
+                    if (i === 6) {
+                        // Row 6: File A has Salary, File B leaves it empty (deleted cell)
+                        row[3] = isFileB ? '' : row[3];
+                    }
+                    if (i === 4) {
+                        // Row 4: File B has new Status value, File A leaves it empty (added cell)
+                        row[4] = isFileB ? 'Pending' : '';
+                    }
+                    if (i === 8) {
+                        // Row 8: File B has new Department, File A leaves it empty (added cell)
+                        row[2] = isFileB ? 'New Dept' : '';
+                    }
+                }
+                
+                if (isFileB) {
+                    row.push(`emp${i}@company.com`, `555-${1000 + i}`); // New columns
+                } else {
+                    row.push(`Note for employee ${i}`); // Old column
+                }
+                
+                data.push(row);
             }
 
-            // 🟢 新增 5 行 (File A 沒有)
-            for (let i = 51; i <= 55; i++) {
-                sheet1Data.push([
-                    `新員工${i}`,
-                    25,
-                    '新部門',
-                    50000,
-                    'A+',
-                    '新增的行',
-                    '2024-06-01',
-                    '0912345678'
+            // Add extra rows in File B
+            if (isFileB) {
+                for (let i = 51; i <= 55; i++) {
+                    data.push([
+                        i,
+                        `New Employee ${i}`,
+                        `Dept ${(i % 5) + 1}`,
+                        60000,
+                        'Active',
+                        `emp${i}@company.com`,
+                        `555-${1000 + i}`
+                    ]);
+                }
+            }
+
+            return data;
+        }
+
+        // Generate test data for DataSheet
+        function generateDataSheetData(isFileB = false) {
+            const data = [];
+            const headers = ['Row', 'Col1', 'Col2', 'Col3', 'Col4', 'Col5', 'Col6', 
+                           'Col7', 'Col8', 'Col9', 'Col10', 'Col11', 'Col12', 'Col13', 'Col14'];
+            data.push(headers);
+
+            for (let i = 1; i <= 100; i++) {
+                const row = [i];
+                for (let j = 1; j <= 14; j++) {
+                    row.push(`Data_${i}_${j}`);
+                }
+
+                // **NEW: Individual cell deletions and additions in first 10 rows**
+                if (i <= 10) {
+                    if (i === 2) {
+                        // Row 2: File A has Col3, File B deletes it
+                        row[3] = isFileB ? '' : row[3];
+                    }
+                    if (i === 5) {
+                        // Row 5: File A has Col7, File B deletes it
+                        row[7] = isFileB ? '' : row[7];
+                    }
+                    if (i === 7) {
+                        // Row 7: File B adds Col5, File A doesn't have it
+                        row[5] = isFileB ? 'NEW_DATA_7_5' : '';
+                    }
+                    if (i === 9) {
+                        // Row 9: File B adds Col10, File A doesn't have it
+                        row[10] = isFileB ? 'NEW_DATA_9_10' : '';
+                    }
+                }
+                
+                data.push(row);
+            }
+
+            return data;
+        }
+
+        // Generate renamed sheet data (Sales → Revenue)
+        function generateSalesData(isFileB = false) {
+            const data = [];
+            data.push(['Month', 'Product', 'Sales', 'Profit']);
+            
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const products = ['Product A', 'Product B', 'Product C'];
+            
+            months.forEach(month => {
+                products.forEach(product => {
+                    data.push([
+                        month,
+                        product,
+                        Math.floor(Math.random() * 10000),
+                        Math.floor(Math.random() * 5000)
+                    ]);
+                });
+            });
+
+            // Add some variations in File B to ensure 95%+ similarity
+            if (isFileB) {
+                data[5][2] = data[5][2] + 100; // Slightly different value
+                data[10][3] = data[10][3] + 50;
+            }
+
+            return data;
+        }
+
+        // Generate another renamed sheet (Q1Data → Q1_2024)
+        function generateQ1Data(isFileB = false) {
+            const data = [];
+            data.push(['Week', 'Revenue', 'Expenses', 'Net']);
+            
+            for (let i = 1; i <= 13; i++) {
+                const revenue = 10000 + Math.floor(Math.random() * 5000);
+                const expenses = 7000 + Math.floor(Math.random() * 3000);
+                data.push([
+                    `Week ${i}`,
+                    revenue,
+                    expenses,
+                    revenue - expenses
                 ]);
             }
 
-            // ❌ 注意：「待刪除」的 3 行不加入 File B
-
-            const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
-            XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1');
-
-            // ===== DataSheet - 稍微修改 =====
-            const dataSheetData = [
-                ['ID', 'Date', 'Product', 'Quantity', 'Price', 'Total', 'Region', 'Category', 'Status', 'Discount', 'Tax', 'Profit', 'Customer', 'Salesperson', 'Notes']
-            ];
-
-            for (let i = 1; i <= 100; i++) {
-                const row = [
-                    `ID-${String(i).padStart(4, '0')}`,
-                    `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
-                    `Product-${(i % 10) + 1}`,
-                    Math.floor(Math.random() * 100) + 1,
-                    Math.floor(Math.random() * 1000) + 100,
-                    Math.floor(Math.random() * 100000) + 1000,
-                    ['North', 'South', 'East', 'West'][i % 4],
-                    ['Electronics', 'Clothing', 'Food', 'Books'][i % 4],
-                    ['Pending', 'Completed', 'Cancelled'][i % 3],
-                    `${(i % 20)}%`,
-                    `${(i % 10)}%`,
-                    Math.floor(Math.random() * 10000),
-                    `Customer-${i % 50}`,
-                    `Sales-${i % 10}`,
-                    `Note for row ${i}`
-                ];
-
-                // 修改部分數據
-                if (i % 10 === 0) {
-                    row[8] = 'Updated';  // 修改 Status
-                }
-
-                dataSheetData.push(row);
+            // Add more variations for ~88% similarity
+            if (isFileB) {
+                data[3][1] = data[3][1] + 500;
+                data[7][2] = data[7][2] + 300;
+                data[11][3] = data[11][3] + 200;
             }
 
-            const ws2 = XLSX.utils.aoa_to_sheet(dataSheetData);
-            XLSX.utils.book_append_sheet(wb, ws2, 'DataSheet');
+            return data;
+        }
 
-            // ===== NewReport - 新增的 sheet =====
-            const newReportData = [
-                ['New Item', 'New Value', 'Category'],
-                ['Item X', 500, 'Category A'],
-                ['Item Y', 600, 'Category B'],
-                ['Item Z', 700, 'Category C']
-            ];
-            const ws3 = XLSX.utils.aoa_to_sheet(newReportData);
-            XLSX.utils.book_append_sheet(wb, ws3, 'NewReport');
+        // Generate unchanged sheet
+        function generateSummaryData() {
+            const data = [];
+            data.push(['Category', 'Count', 'Percentage']);
+            data.push(['Active', 45, '90%']);
+            data.push(['Inactive', 5, '10%']);
+            data.push(['Total', 50, '100%']);
+            return data;
+        }
 
-            // ❌ OldReport 不加入 (被刪除)
-
-            // ===== Revenue - 由 Sales 重命名而來 (95% 相似) =====
-            const revenueData = [
-                ['產品', 'Q1', 'Q2', 'Q3', 'Q4', '總計'],
-                ['產品A', 1000, 1200, 1100, 1300, 4600],  // 完全相同
-                ['產品B', 800, 900, 850, 950, 3500],      // 完全相同
-                ['產品C', 1500, 1650, 1550, 1700, 6400],  // 稍微修改
-                ['產品D', 600, 650, 700, 750, 2700],      // 完全相同
-                ['產品E', 900, 950, 980, 1020, 3850]      // 完全相同
-            ];
-            const ws4 = XLSX.utils.aoa_to_sheet(revenueData);
-            XLSX.utils.book_append_sheet(wb, ws4, 'Revenue');
-
-            // ===== Q1_2024 - 由 Q1Data 重命名而來 (88% 相似) =====
-            const q1_2024Data = [
-                ['Week', 'Revenue', 'Expenses', 'Profit', 'Growth'],  // 👈 多一列
-                ['Week 1', 10000, 7000, 3000, '5%'],
-                ['Week 2', 12500, 8000, 4500, '8%'],  // 修改
-                ['Week 3', 11000, 7500, 3500, '3%'],
-                ['Week 4', 13000, 8500, 4500, '7%']
-            ];
-            const ws5 = XLSX.utils.aoa_to_sheet(q1_2024Data);
-            XLSX.utils.book_append_sheet(wb, ws5, 'Q1_2024');
-
-            // ===== Summary - 完全相同 =====
-            const summaryData = [
-                ['項目', '數值'],
-                ['總銷售額', 1000000],
-                ['總成本', 600000],
-                ['淨利潤', 400000],
-                ['員工人數', 50]
-            ];
-            const ws6 = XLSX.utils.aoa_to_sheet(summaryData);
-            XLSX.utils.book_append_sheet(wb, ws6, 'Summary');
-
+        // Generate File A
+        function generateFileA() {
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet1
+            const sheet1 = XLSX.utils.aoa_to_sheet(generateSheet1Data(false));
+            XLSX.utils.book_append_sheet(wb, sheet1, 'Sheet1');
+            
+            // DataSheet
+            const dataSheet = XLSX.utils.aoa_to_sheet(generateDataSheetData(false));
+            XLSX.utils.book_append_sheet(wb, dataSheet, 'DataSheet');
+            
+            // OldReport (will be deleted in File B)
+            const oldReport = XLSX.utils.aoa_to_sheet([
+                ['This sheet', 'will be', 'deleted'],
+                ['in File B', '', '']
+            ]);
+            XLSX.utils.book_append_sheet(wb, oldReport, 'OldReport');
+            
+            // Sales (will be renamed to Revenue in File B)
+            const sales = XLSX.utils.aoa_to_sheet(generateSalesData(false));
+            XLSX.utils.book_append_sheet(wb, sales, 'Sales');
+            
+            // Q1Data (will be renamed to Q1_2024 in File B)
+            const q1Data = XLSX.utils.aoa_to_sheet(generateQ1Data(false));
+            XLSX.utils.book_append_sheet(wb, q1Data, 'Q1Data');
+            
+            // Summary (unchanged)
+            const summary = XLSX.utils.aoa_to_sheet(generateSummaryData());
+            XLSX.utils.book_append_sheet(wb, summary, 'Summary');
+            
             return wb;
         }
 
+        // Generate File B
+        function generateFileB() {
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet1 (with modifications)
+            const sheet1 = XLSX.utils.aoa_to_sheet(generateSheet1Data(true));
+            XLSX.utils.book_append_sheet(wb, sheet1, 'Sheet1');
+            
+            // DataSheet
+            const dataSheet = XLSX.utils.aoa_to_sheet(generateDataSheetData(true));
+            XLSX.utils.book_append_sheet(wb, dataSheet, 'DataSheet');
+            
+            // NewReport (added in File B)
+            const newReport = XLSX.utils.aoa_to_sheet([
+                ['This is', 'a new', 'sheet'],
+                ['added in', 'File B', '!']
+            ]);
+            XLSX.utils.book_append_sheet(wb, newReport, 'NewReport');
+            
+            // Revenue (renamed from Sales)
+            const revenue = XLSX.utils.aoa_to_sheet(generateSalesData(true));
+            XLSX.utils.book_append_sheet(wb, revenue, 'Revenue');
+            
+            // Q1_2024 (renamed from Q1Data)
+            const q1_2024 = XLSX.utils.aoa_to_sheet(generateQ1Data(true));
+            XLSX.utils.book_append_sheet(wb, q1_2024, 'Q1_2024');
+            
+            // Summary (unchanged)
+            const summary = XLSX.utils.aoa_to_sheet(generateSummaryData());
+            XLSX.utils.book_append_sheet(wb, summary, 'Summary');
+            
+            return wb;
+        }
+
+        // Download functions
         function downloadFileA() {
             const wb = generateFileA();
-            XLSX.writeFile(wb, 'TestFile_A_Original.xlsx');
+            XLSX.writeFile(wb, 'Test_File_A_Original.xlsx');
         }
 
         function downloadFileB() {
             const wb = generateFileB();
-            XLSX.writeFile(wb, 'TestFile_B_Modified.xlsx');
+            XLSX.writeFile(wb, 'Test_File_B_NewVersion.xlsx');
         }
 
         function downloadBoth() {
             downloadFileA();
             setTimeout(() => {
                 downloadFileB();
-            }, 300);
+            }, 500);
         }
     </script>
 </body>

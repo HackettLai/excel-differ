@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Excel Differ - 本地 Excel 比較工具</title>
+    <title>Excel Differ - Local Excel Comparison Tool</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <!-- Header -->
       <header class="header">
         <h1>📊 Excel Differ</h1>
-        <p>本地 Excel 文件比較工具 - 完全在瀏覽器運行，數據不上傳</p>
+        <p>Local Excel file comparison tool - runs completely in the browser, no data is uploaded</p>
       </header>
 
       <!-- Upload Section -->
@@ -20,10 +20,10 @@
           <div class="upload-box">
             <div class="upload-area" id="uploadA">
               <div class="upload-icon">📁</div>
-              <h3>File A (原始版本)</h3>
+              <h3>File A (Original)</h3>
               <input type="file" id="fileA" accept=".xlsx,.xls,.csv" hidden />
-              <button onclick="document.getElementById('fileA').click()">選擇文件</button>
-              <p class="file-name" id="fileNameA">未選擇文件</p>
+              <button onclick="document.getElementById('fileA').click()">Select File</button>
+              <p class="file-name" id="fileNameA">No file selected</p>
             </div>
           </div>
 
@@ -32,22 +32,22 @@
           <div class="upload-box">
             <div class="upload-area" id="uploadB">
               <div class="upload-icon">📁</div>
-              <h3>File B (新版本)</h3>
+              <h3>File B (New Version)</h3>
               <input type="file" id="fileB" accept=".xlsx,.xls,.csv" hidden />
-              <button onclick="document.getElementById('fileB').click()">選擇文件</button>
-              <p class="file-name" id="fileNameB">未選擇文件</p>
+              <button onclick="document.getElementById('fileB').click()">Select File</button>
+              <p class="file-name" id="fileNameB">No file selected</p>
             </div>
           </div>
         </div>
 
-        <button id="compareBtn" class="compare-btn" disabled>開始比較</button>
+        <button id="compareBtn" class="compare-btn" disabled>Start Comparing</button>
       </section>
 
       <!-- Summary Section -->
       <section id="summarySection" class="summary-section" style="display: none">
         <div class="summary-header">
-          <h2>📋 比較摘要</h2>
-          <button id="backBtn" class="back-btn">← 重新上傳</button>
+          <h2>📋 Comparison Summary</h2>
+          <button id="backBtn" class="back-btn">← Reupload</button>
         </div>
 
         <div class="file-info">
@@ -56,18 +56,17 @@
         </div>
 
         <div class="sheet-changes">
-          <h3>Sheet 變更：</h3>
-          <p class="hint">💡 點擊 Sheet 查看詳細差異</p>
+          <h3>Sheet Changes:</h3>
+          <p class="hint">💡 Click on a Sheet to view detailed differences</p>
           <div id="sheetChangesList"></div>
         </div>
-
       </section>
 
       <!-- Diff Viewer Section -->
       <section id="diffSection" class="diff-section" style="display: none">
         <div class="diff-header">
-          <button id="backToSummaryBtn" class="back-btn">← 返回摘要</button>
-          <h2 id="currentSheetTitle">Sheet 比較</h2>
+          <button id="backToSummaryBtn" class="back-btn">← Back to Summary</button>
+          <h2 id="currentSheetTitle">Sheet Comparison</h2>
         </div>
 
         <!-- Sheet Navigation Tabs -->
@@ -75,14 +74,14 @@
 
         <!-- Legend -->
         <div class="legend">
-          <div class="legend-item"><span class="legend-color added"></span> 新增</div>
-          <div class="legend-item"><span class="legend-color removed"></span> 刪除</div>
-          <div class="legend-item"><span class="legend-color modified"></span> 修改</div>
-          <div class="legend-item"><span class="legend-color unchanged"></span> 無變化</div>
+          <div class="legend-item"><span class="legend-color added"></span> Added</div>
+          <div class="legend-item"><span class="legend-color removed"></span> Removed</div>
+          <div class="legend-item"><span class="legend-color modified"></span> Modified</div>
+          <div class="legend-item"><span class="legend-color unchanged"></span> Unchanged</div>
           <div class="sync-control">
-            <button id="syncToggle" class="sync-button active" title="點擊切換同步滾動">
+            <button id="syncToggle" class="sync-button active" title="Click to toggle sync scrolling">
               <span class="sync-icon">🔗</span>
-              <span class="sync-text">同步滾動</span>
+              <span class="sync-text">Sync Scroll</span>
             </button>
           </div>
         </div>
@@ -93,7 +92,7 @@
           <!-- Left Pane (File A) -->
           <div class="diff-pane" id="diffPaneA">
             <div class="pane-header">
-              <h3>📄 File A (原始)</h3>
+              <h3>📄 File A (Original)</h3>
               <span id="fileAName"></span>
             </div>
             <div class="table-wrapper">
@@ -104,7 +103,7 @@
           <!-- Right Pane (File B) -->
           <div class="diff-pane" id="diffPaneB">
             <div class="pane-header">
-              <h3>📄 File B (新版)</h3>
+              <h3>📄 File B (New Version)</h3>
               <span id="fileBName"></span>
             </div>
             <div class="table-wrapper">
@@ -112,8 +111,13 @@
             </div>
           </div>
         </div>
+        <!-- Tooltips -->
+        <div id="customTooltip" class="custom-tooltip"></div>
       </section>
     </div>
+
+
+    <!-- Footer -->
     <footer>
       <p>Built Version 1.1.0 <a href="https://tool.hackettlai.com">Hackett.Lai</a> @ <span id="thisYear"></span></p>
     </footer>
@@ -121,14 +125,14 @@
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none">
       <div class="spinner"></div>
-      <p>處理中...</p>
+      <p>Processing...</p>
     </div>
 
     <!-- SheetJS Library -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <!-- Our Modules -->
-     <script src="js/copyright.js"></script>
+    <script src="js/copyright.js"></script>
     <script src="js/excelParser.js"></script>
     <script src="js/diffEngine.js"></script>
     <script src="js/fileHandler.js"></script>

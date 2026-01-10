@@ -7,17 +7,17 @@
 body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  /* gap: 10px; */
   /* background: linear-gradient(135deg, #0f7c41 0%, #764ba2 100%); */
   background: #f9fafa;
-  padding: 20px;
-  min-height: 100vh;
+  /* padding: 20px; */
+  min-height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .container {
-  flex: 1;
-  margin: 0 auto;
+  /* flex: 1; */
+  margin: 20px auto auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   background: white;
@@ -330,7 +330,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-bottom: 20px;
+  /* margin-bottom: 20px; */
 }
 
 .diff-pane {
@@ -357,7 +357,7 @@ body {
 
 .table-wrapper {
   position: relative;
-  max-height: 600px;
+  max-height: calc(100dvh - 560px);
   overflow: auto;
   /* 👇 Safari 滾動優化 */
   -webkit-overflow-scrolling: touch;
@@ -636,6 +636,7 @@ body {
 }
 
 footer {
+  padding: 12px 0px;
   color: #333;
   font-size: 12px;
   text-align: center;
@@ -655,4 +656,46 @@ footer a {
   .sync-icon {
     font-size: 16px;
   }
+}
+
+
+/* 自訂 Tooltip */
+.custom-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: pre-line;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10000;
+    max-width: 300px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.custom-tooltip.visible {
+    opacity: 1;
+}
+
+/* 儲存格 hover 效果 */
+.diff-table tbody td:not(.row-header):hover {
+    outline: 2px solid #4CAF50;
+    outline-offset: -1px;
+    cursor: help;
+}
+
+.diff-table tbody td.cell-modified:hover {
+    outline-color: #FF9800;
+}
+
+.diff-table tbody td.cell-added:hover {
+    outline-color: #4CAF50;
+}
+
+.diff-table tbody td.cell-removed:hover {
+    outline-color: #f44336;
 }

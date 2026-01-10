@@ -1,4 +1,4 @@
-// main.js - 主流程控制
+// main.js - 主流程控制（Safari 兼容版）
 
 const App = {
     
@@ -39,16 +39,35 @@ const App = {
         });
     },
     
+    // 👇 新增：等待瀏覽器完成渲染
+    waitForRender() {
+        return new Promise(resolve => {
+            // 使用 setTimeout 確保 UI 更新完成
+            setTimeout(() => {
+                // 再用 requestAnimationFrame 確保下一幀已繪製
+                requestAnimationFrame(() => {
+                    resolve();
+                });
+            }, 0);
+        });
+    },
+    
     // 開始比較流程
     async startComparison() {
         try {
             // 顯示 loading
             this.showLoading(true);
             
+            // 👇 等待 loading 完成渲染（Safari 修復）
+            await this.waitForRender();
+            
             // 讀取文件
             console.log('📖 讀取文件...');
             const fileDataA = await FileHandler.getFileData('A');
             const fileDataB = await FileHandler.getFileData('B');
+            
+            // 👇 再次等待，確保 UI 穩定
+            await this.waitForRender();
             
             // 解析 Excel
             console.log('🔍 解析 Excel...');
@@ -58,6 +77,9 @@ const App = {
             console.log('File A:', parsedA);
             console.log('File B:', parsedB);
             
+            // 👇 等待解析完成後 UI 更新
+            await this.waitForRender();
+            
             // 執行 Diff
             console.log('⚡ 執行差異比較...');
             const diffResult = DiffEngine.compare(parsedA, parsedB);
@@ -66,6 +88,9 @@ const App = {
             
             // 隱藏 loading
             this.showLoading(false);
+            
+            // 👇 等待 loading 隱藏完成
+            await this.waitForRender();
             
             // 顯示 Summary
             SummaryView.show(diffResult, parsedA, parsedB);

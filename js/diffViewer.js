@@ -1,4 +1,4 @@
-// diffViewer.js - Side-by-side 表格差異顯示
+// diffViewer.js - 差異檢視器模組
 
 const DiffViewer = {
   currentDiffResult: null,
@@ -6,11 +6,14 @@ const DiffViewer = {
   currentFileB: null,
   currentSheet: null,
   currentStatus: null,
-  isSyncing: false,
+  isSyncingVertical: false,
   syncEnabled: true,
   wrapperA: null,
   wrapperB: null,
-  HEADER_HEIGHT: 38, // 👈 新增：sticky header 高度
+  HEADER_HEIGHT: 38,
+  verticalSyncTimeoutId: null,
+  tooltipElement: null,
+  currentTooltipCell: null,
 
   initSyncButton() {
     const syncBtn = document.getElementById('syncToggle');
@@ -21,24 +24,77 @@ const DiffViewer = {
     });
   },
 
+  initTooltip() {
+    this.tooltipElement = document.getElementById('customTooltip');
+    if (!this.tooltipElement) {
+      console.warn('❌ 找不到 tooltip 元素');
+    } else {
+      console.log('✅ Tooltip 元素找到了！');
+
+      document.addEventListener('mousemove', (e) => {
+        if (this.currentTooltipCell && this.tooltipElement.classList.contains('visible')) {
+          this.updateTooltipPosition(e.clientX, e.clientY);
+        }
+      });
+    }
+  },
+
+  updateTooltipPosition(x, y) {
+    if (!this.tooltipElement) return;
+
+    const tooltipRect = this.tooltipElement.getBoundingClientRect();
+    const padding = 10;
+
+    let left = x + padding;
+    let top = y + padding;
+
+    if (left + tooltipRect.width > window.innerWidth) {
+      left = x - tooltipRect.width - padding;
+    }
+
+    if (top + tooltipRect.height > window.innerHeight) {
+      top = y - tooltipRect.height - padding;
+    }
+
+    this.tooltipElement.style.left = `${left}px`;
+    this.tooltipElement.style.top = `${top}px`;
+  },
+
+  showTooltip(text, x, y) {
+    if (!this.tooltipElement || !text) return;
+
+    this.tooltipElement.textContent = text;
+    this.tooltipElement.classList.add('visible');
+    this.updateTooltipPosition(x, y);
+  },
+
+  hideTooltip() {
+    if (!this.tooltipElement) return;
+    this.tooltipElement.classList.remove('visible');
+    this.currentTooltipCell = null;
+  },
+
   toggleSync() {
     this.syncEnabled = !this.syncEnabled;
     const syncBtn = document.getElementById('syncToggle');
 
     if (this.syncEnabled) {
       syncBtn.classList.add('active');
-      syncBtn.querySelector('.sync-text').textContent = '同步滾動';
-      this.realignScroll();
+      syncBtn.querySelector('.sync-text').textContent = 'Sync Scroll';
+
+      requestAnimationFrame(() => {
+        this.realignScroll();
+      });
     } else {
       syncBtn.classList.remove('active');
-      syncBtn.querySelector('.sync-text').textContent = '已關閉';
+      syncBtn.querySelector('.sync-text').textContent = 'Disabled';
+      this.isSyncingVertical = false;
     }
   },
 
-  // 👇 修改：考慮 header 高度
   getFirstVisibleRowNumber(wrapper) {
     if (!wrapper) return null;
-    
+
     const table = wrapper.querySelector('table');
     if (!table) return null;
 
@@ -48,15 +104,13 @@ const DiffViewer = {
     const rows = tbody.querySelectorAll('tr');
     if (rows.length === 0) return null;
 
-    // 👇 加上 header 高度的偏移
     const scrollTop = wrapper.scrollTop + this.HEADER_HEIGHT;
-    
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowTop = row.offsetTop;
       const rowBottom = rowTop + row.offsetHeight;
-      
-      // 👇 當 row 底部超過可視區域頂部（含 header）
+
       if (rowBottom > scrollTop) {
         const rowHeader = row.querySelector('.row-header');
         if (rowHeader) {
@@ -64,14 +118,13 @@ const DiffViewer = {
         }
       }
     }
-    
+
     return null;
   },
 
-  // 👇 修改：滾動時減去 header 高度
-  scrollToRowNumber(wrapper, rowNumber, smooth = false) {
+  scrollToRowNumber(wrapper, rowNumber) {
     if (!wrapper) return false;
-    
+
     const table = wrapper.querySelector('table');
     if (!table) return false;
 
@@ -79,27 +132,18 @@ const DiffViewer = {
     if (!tbody) return false;
 
     const rows = tbody.querySelectorAll('tr');
-    
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowHeader = row.querySelector('.row-header');
-      
+
       if (rowHeader && parseInt(rowHeader.textContent) === rowNumber) {
-        // 👇 減去 header 高度，讓 row 出現在 header 下方
         const targetScrollTop = Math.max(0, row.offsetTop - this.HEADER_HEIGHT);
-        
-        if (smooth) {
-          wrapper.scrollTo({
-            top: targetScrollTop,
-            behavior: 'smooth'
-          });
-        } else {
-          wrapper.scrollTop = targetScrollTop;
-        }
+        wrapper.scrollTop = targetScrollTop;
         return true;
       }
     }
-    
+
     return false;
   },
 
@@ -108,44 +152,40 @@ const DiffViewer = {
 
     const rowNumberA = this.getFirstVisibleRowNumber(this.wrapperA);
     const rowNumberB = this.getFirstVisibleRowNumber(this.wrapperB);
-    
-    if (!rowNumberA && !rowNumberB) return;
-    
-    const targetRowNumber = Math.min(
-      rowNumberA || Infinity,
-      rowNumberB || Infinity
-    );
-    
-    this.isSyncing = true;
-    
-    this.scrollToRowNumber(this.wrapperA, targetRowNumber, true);
-    this.scrollToRowNumber(this.wrapperB, targetRowNumber, true);
-    
+
+    if (!rowNumberA && !rowNumberB) {
+      return;
+    }
+
+    const targetRowNumber = Math.min(rowNumberA || Infinity, rowNumberB || Infinity);
+
+    this.isSyncingVertical = true;
+
+    this.scrollToRowNumber(this.wrapperA, targetRowNumber);
+    this.scrollToRowNumber(this.wrapperB, targetRowNumber);
+
     const avgScrollLeft = (this.wrapperA.scrollLeft + this.wrapperB.scrollLeft) / 2;
-    
-    this.wrapperA.scrollTo({
-      left: avgScrollLeft,
-      behavior: 'smooth'
-    });
-    this.wrapperB.scrollTo({
-      left: avgScrollLeft,
-      behavior: 'smooth'
-    });
-    
-    setTimeout(() => {
-      this.isSyncing = false;
-    }, 500);
+    this.wrapperA.scrollLeft = avgScrollLeft;
+    this.wrapperB.scrollLeft = avgScrollLeft;
+
+    if (this.verticalSyncTimeoutId) {
+      clearTimeout(this.verticalSyncTimeoutId);
+    }
+    this.verticalSyncTimeoutId = setTimeout(() => {
+      this.isSyncingVertical = false;
+      this.verticalSyncTimeoutId = null;
+    }, 150);
   },
 
-  syncScrollByRowNumber(sourceWrapper, targetWrapper) {
+  syncVertical(sourceWrapper, targetWrapper) {
     const sourceRowNumber = this.getFirstVisibleRowNumber(sourceWrapper);
-    
+
     if (!sourceRowNumber) return;
-    
-    const found = this.scrollToRowNumber(targetWrapper, sourceRowNumber, false);
-    
-    if (!found) return;
-    
+
+    this.scrollToRowNumber(targetWrapper, sourceRowNumber);
+  },
+
+  syncHorizontal(sourceWrapper, targetWrapper) {
     targetWrapper.scrollLeft = sourceWrapper.scrollLeft;
   },
 
@@ -197,49 +237,64 @@ const DiffViewer = {
     checkScrollable(this.wrapperA, 'wrapperA');
     checkScrollable(this.wrapperB, 'wrapperB');
 
+    // 👇 移除 cloneNode，直接重新綁定事件
+    // 先移除舊的事件監聽器（如果有的話）
     const newWrapperA = this.wrapperA.cloneNode(true);
     const newWrapperB = this.wrapperB.cloneNode(true);
-    
+
     this.wrapperA.parentNode.replaceChild(newWrapperA, this.wrapperA);
     this.wrapperB.parentNode.replaceChild(newWrapperB, this.wrapperB);
-    
+
     this.wrapperA = newWrapperA;
     this.wrapperB = newWrapperB;
 
-    let rafA = null;
-    let rafB = null;
+    this.wrapperA.addEventListener(
+      'scroll',
+      () => {
+        if (!this.syncEnabled) return;
 
-    this.wrapperA.addEventListener('scroll', () => {
-      if (this.isSyncing || !this.syncEnabled) return;
+        this.syncHorizontal(this.wrapperA, this.wrapperB);
 
-      if (rafA) cancelAnimationFrame(rafA);
+        if (this.isSyncingVertical) return;
 
-      rafA = requestAnimationFrame(() => {
-        this.isSyncing = true;
-        this.syncScrollByRowNumber(this.wrapperA, this.wrapperB);
-        
-        requestAnimationFrame(() => {
-          this.isSyncing = false;
-        });
-      });
-    }, { passive: true });
+        this.isSyncingVertical = true;
+        this.syncVertical(this.wrapperA, this.wrapperB);
 
-    this.wrapperB.addEventListener('scroll', () => {
-      if (this.isSyncing || !this.syncEnabled) return;
+        if (this.verticalSyncTimeoutId) {
+          clearTimeout(this.verticalSyncTimeoutId);
+        }
+        this.verticalSyncTimeoutId = setTimeout(() => {
+          this.isSyncingVertical = false;
+          this.verticalSyncTimeoutId = null;
+        }, 100);
+      },
+      { passive: true }
+    );
 
-      if (rafB) cancelAnimationFrame(rafB);
+    this.wrapperB.addEventListener(
+      'scroll',
+      () => {
+        if (!this.syncEnabled) return;
 
-      rafB = requestAnimationFrame(() => {
-        this.isSyncing = true;
-        this.syncScrollByRowNumber(this.wrapperB, this.wrapperA);
-        
-        requestAnimationFrame(() => {
-          this.isSyncing = false;
-        });
-      });
-    }, { passive: true });
+        this.syncHorizontal(this.wrapperB, this.wrapperA);
 
-    console.log('✅ 同步滾動已設置！');
+        if (this.isSyncingVertical) return;
+
+        this.isSyncingVertical = true;
+        this.syncVertical(this.wrapperB, this.wrapperA);
+
+        if (this.verticalSyncTimeoutId) {
+          clearTimeout(this.verticalSyncTimeoutId);
+        }
+        this.verticalSyncTimeoutId = setTimeout(() => {
+          this.isSyncingVertical = false;
+          this.verticalSyncTimeoutId = null;
+        }, 100);
+      },
+      { passive: true }
+    );
+
+    console.log('✅ 同步滾動已設置（垂直/水平分離版）！');
   },
 
   renderTables(sheetName, status, viewSide) {
@@ -247,11 +302,11 @@ const DiffViewer = {
     const tableB = document.getElementById('tableB');
 
     if (status === 'added') {
-      this.renderEmptyTable(tableA, 'Sheet 在 File A 中不存在');
+      this.renderEmptyTable(tableA, 'Sheet does not exist in File A');
       this.renderTable(tableB, sheetName, this.currentFileB, null, 'added');
     } else if (status === 'removed') {
       this.renderTable(tableA, sheetName, this.currentFileA, null, 'removed');
-      this.renderEmptyTable(tableB, 'Sheet 在 File B 中不存在');
+      this.renderEmptyTable(tableB, 'Sheet does not exist in File B');
     } else if (status === 'renamed') {
       const rename = this.currentDiffResult.sheetChanges.renamed.find((r) => r.to === sheetName);
 
@@ -266,9 +321,42 @@ const DiffViewer = {
       this.renderTable(tableB, sheetName, this.currentFileB, cellDiff, 'comparison');
     }
 
+    // 👇 修改：先渲染表格，再設置同步滾動
     setTimeout(() => {
       this.setupSyncScroll();
+      // 👇 在設置同步滾動後，重新綁定 tooltip 事件
+      this.rebindTooltipEvents();
     }, 100);
+  },
+
+  // 👇 新增：重新綁定 tooltip 事件
+  rebindTooltipEvents() {
+    const self = this;
+
+    // 找到所有有 data-tooltip 的儲存格
+    document.querySelectorAll('td[data-tooltip]').forEach((td) => {
+      // 移除舊的事件（避免重複綁定）
+      td.replaceWith(td.cloneNode(true));
+    });
+
+    // 重新綁定事件
+    document.querySelectorAll('td[data-tooltip]').forEach((td) => {
+      td.addEventListener('mouseenter', function (e) {
+        const text = this.dataset.tooltip;
+        if (text) {
+          console.log('✅ mouseenter 觸發:', text);
+          self.currentTooltipCell = this;
+          self.showTooltip(text, e.clientX, e.clientY);
+        }
+      });
+
+      td.addEventListener('mouseleave', function () {
+        console.log('✅ mouseleave 觸發');
+        self.hideTooltip();
+      });
+    });
+
+    console.log('✅ Tooltip 事件已重新綁定，共', document.querySelectorAll('td[data-tooltip]').length, '個儲存格');
   },
 
   renderEmptyTable(tableElement, message) {
@@ -285,7 +373,7 @@ const DiffViewer = {
     const sheet = parsedFile.sheets.find((s) => s.name === sheetName);
 
     if (!sheet) {
-      this.renderEmptyTable(tableElement, '找不到此 Sheet');
+      this.renderEmptyTable(tableElement, 'This Sheet cannot be found.');
       return;
     }
 
@@ -332,7 +420,7 @@ const DiffViewer = {
 
         if (cellValue === '' || cellValue === null || cellValue === undefined) {
           td.classList.add('cell-empty');
-          td.textContent = '(空)';
+          td.textContent = '(Empty)';
         }
 
         if (diffMap) {
@@ -343,13 +431,15 @@ const DiffViewer = {
 
             let tooltipText = '';
             if (diff.type === 'modified') {
-              tooltipText = `舊值: ${diff.oldValue}\n新值: ${diff.newValue}`;
+              tooltipText = `Old Value: ${diff.oldValue}\nNew Value: ${diff.newValue}`;
             } else if (diff.type === 'added') {
-              tooltipText = `新增: ${diff.newValue}`;
+              tooltipText = `Added: ${diff.newValue}`;
             } else if (diff.type === 'removed') {
-              tooltipText = `刪除: ${diff.oldValue}`;
+              tooltipText = `Removed: ${diff.oldValue}`;
             }
-            td.title = tooltipText;
+
+            // 👇 只設置 data-tooltip，事件在 rebindTooltipEvents() 中統一綁定
+            td.dataset.tooltip = tooltipText;
           } else {
             td.classList.add('cell-unchanged');
           }
@@ -372,9 +462,11 @@ const DiffViewer = {
 
   hide() {
     document.getElementById('diffSection').style.display = 'none';
+    this.hideTooltip();
   },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   DiffViewer.initSyncButton();
+  DiffViewer.initTooltip();
 });

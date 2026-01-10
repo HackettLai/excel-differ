@@ -140,15 +140,15 @@ const SummaryView = {
     getStatusText(sheet) {
         switch (sheet.status) {
             case 'unchanged':
-                return '無變化';
+                return 'Unchanged';
             case 'modified':
-                return `${sheet.changeCount} 個變更`;
+                return `${sheet.changeCount} changes`;
             case 'added':
-                return '新增';
+                return 'New Sheet';
             case 'removed':
-                return '刪除';
+                return 'Sheet Removed';
             case 'renamed':
-                return `重命名 (${sheet.confidence}% 相似)`;
+                return `Renamed (${sheet.confidence}% Similar)`;
             default:
                 return '';
         }

@@ -31,13 +31,13 @@ const FileHandler = {
         
         // 驗證文件類型
         if (!this.isValidFile(file)) {
-            alert('請選擇有效的 Excel 文件 (.xlsx, .xls, .csv)');
+            alert('Please select a valid Excel file (.xlsx, .xls, .csv)');
             return;
         }
         
         // 驗證文件大小 (限制 50MB)
         if (file.size > 50 * 1024 * 1024) {
-            alert('文件太大！請選擇小於 50MB 的文件');
+            alert('File too large! Please select a file smaller than 50MB');
             return;
         }
         
@@ -118,7 +118,7 @@ const FileHandler = {
             };
             
             reader.onerror = (e) => {
-                reject(new Error('文件讀取失敗'));
+                reject(new Error('Failed to read file'));
             };
             
             reader.readAsArrayBuffer(file);
@@ -146,8 +146,8 @@ const FileHandler = {
         
         document.getElementById('fileA').value = '';
         document.getElementById('fileB').value = '';
-        document.getElementById('fileNameA').textContent = '未選擇文件';
-        document.getElementById('fileNameB').textContent = '未選擇文件';
+        document.getElementById('fileNameA').textContent = 'No file selected';
+        document.getElementById('fileNameB').textContent = 'No file selected';
         
         this.checkCompareButton();
     }

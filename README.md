@@ -6,6 +6,11 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 
+| <img width="600"  alt="screenshort-edited-1" src="https://github.com/user-attachments/assets/2b3b1061-5a6e-4c22-bf84-3aa64f44ed77" />  | <img width="600"  alt="screenshort-edited-2" src="https://github.com/user-attachments/assets/6fc5efb0-dc1a-44f2-95d2-e71ba522be6b" /> | <img width="600"  alt="screenshort-edited-3" src="https://github.com/user-attachments/assets/08de3c2a-baa9-426d-990e-35984c9c65dd" /> |
+|:---:|:---:|:---:|
+| <img width="600"  alt="screenshort-edited-4" src="https://github.com/user-attachments/assets/87b570f6-2067-44d7-bbe4-0c30a56e1c80" />  | <img width="600"  alt="screenshort-edited-5" src="https://github.com/user-attachments/assets/abffa303-e828-403f-9d5b-823d4cdd81bb" /> |  |
+
+
 ## Features ✨
 
 - **📁 Drag & Drop Support** - Simply drag and drop Excel files to compare

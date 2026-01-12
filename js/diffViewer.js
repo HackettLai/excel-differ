@@ -14,6 +14,11 @@ const DiffViewer = {
   verticalSyncTimeoutId: null,
   tooltipElement: null,
   currentTooltipCell: null,
+  changedCells: [],
+  currentChangeIndex: -1,
+  prevBtn: null,
+  nextBtn: null,
+  counterDisplay: null,
 
   /**
    * Initialize the sync scroll toggle button
@@ -25,6 +30,125 @@ const DiffViewer = {
     syncBtn.addEventListener('click', () => {
       this.toggleSync();
     });
+  },
+
+  /**
+   * Initialize the change navigation buttons
+   */
+  initChangeNavigation() {
+    this.prevBtn = document.getElementById('prevChangeBtn');
+    this.nextBtn = document.getElementById('nextChangeBtn');
+    this.counterDisplay = document.getElementById('changeCounter');
+
+    if (!this.prevBtn || !this.nextBtn || !this.counterDisplay) {
+      console.warn('❌ Change navigation elements not found');
+      return;
+    }
+
+    // Previous button click
+    this.prevBtn.addEventListener('click', () => {
+      this.navigateToChange('prev');
+    });
+
+    // Next button click
+    this.nextBtn.addEventListener('click', () => {
+      this.navigateToChange('next');
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Only work when diff section is visible
+      if (document.getElementById('diffSection').style.display !== 'block') return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        this.navigateToChange('next');
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        this.navigateToChange('prev');
+      }
+    });
+
+    console.log('✅ Change navigation initialized');
+  },
+
+  /**
+   * Collect all changed cells from both tables
+   * Builds an array of cell references for navigation
+   */
+  collectChangedCells() {
+    this.changedCells = [];
+    this.currentChangeIndex = -1;
+
+    const tableA = document.getElementById('tableA');
+    const tableB = document.getElementById('tableB');
+
+    if (!tableA || !tableB) {
+      this.updateNavigationUI();
+      return;
+    }
+
+    // Collect from both tables (use Set to avoid duplicates)
+    const cellSet = new Set();
+
+    // Helper function to collect cells from a table
+    const collectFromTable = (table, side) => {
+      const cells = table.querySelectorAll('td.cell-modified, td.cell-added, td.cell-removed');
+      cells.forEach((cell) => {
+        const row = cell.parentElement;
+        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
+        const colIndex = Array.from(row.children).indexOf(cell) - 1; // -1 to skip row header
+
+        if (colIndex >= 0) {
+          const key = `${rowIndex}-${colIndex}`;
+          if (!cellSet.has(key)) {
+            cellSet.add(key);
+            this.changedCells.push({
+              row: rowIndex,
+              col: colIndex,
+              cellA: side === 'A' ? cell : this.getCellAt(tableA, rowIndex, colIndex),
+              cellB: side === 'B' ? cell : this.getCellAt(tableB, rowIndex, colIndex),
+              key: key,
+            });
+          }
+        }
+      });
+    };
+
+    collectFromTable(tableA, 'A');
+    collectFromTable(tableB, 'B');
+
+    // Sort by row, then by column
+    this.changedCells.sort((a, b) => {
+      if (a.row !== b.row) return a.row - b.row;
+      return a.col - b.col;
+    });
+
+    console.log(`📍 Collected ${this.changedCells.length} changed cells`);
+    this.updateNavigationUI();
+  },
+
+  /**
+   * Get cell at specific row and column from a table
+   * @param {HTMLElement} table - The table element
+   * @param {number} rowIndex - Row index
+   * @param {number} colIndex - Column index (0-based, excluding row header)
+   * @returns {HTMLElement|null} The cell element or null
+   */
+  getCellAt(table, rowIndex, colIndex) {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return null;
+
+    const rows = tbody.querySelectorAll('tr');
+    if (rowIndex >= rows.length) return null;
+
+    const row = rows[rowIndex];
+    const cells = row.querySelectorAll('td');
+
+    // +1 because first cell is row header
+    if (colIndex + 1 >= cells.length) return null;
+
+    return cells[colIndex + 1];
   },
 
   /**
@@ -43,6 +167,106 @@ const DiffViewer = {
           this.updateTooltipPosition(e.clientX, e.clientY);
         }
       });
+    }
+  },
+
+  /**
+   * Navigate to the next or previous change
+   * @param {string} direction - 'next' or 'prev'
+   */
+  navigateToChange(direction) {
+    if (this.changedCells.length === 0) {
+      console.log('⚠️ No changes to navigate');
+      return;
+    }
+
+    // Calculate new index
+    if (direction === 'next') {
+      this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changedCells.length;
+    } else if (direction === 'prev') {
+      this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changedCells.length) % this.changedCells.length;
+    }
+
+    const change = this.changedCells[this.currentChangeIndex];
+    this.scrollToChange(change);
+    this.updateNavigationUI();
+  },
+
+  /**
+   * Scroll both tables to show the specified change
+   * Highlights the cells temporarily
+   * @param {Object} change - Change object with cellA and cellB
+   */
+  scrollToChange(change) {
+    if (!change) return;
+
+    // Remove previous highlights
+    document.querySelectorAll('.cell-highlighted').forEach((cell) => {
+      cell.classList.remove('cell-highlighted');
+    });
+
+    // Temporarily disable synchronized scrolling to avoid interfering with positioning.
+    const originalSyncState = this.syncEnabled;
+    this.syncEnabled = false;
+    this.isSyncingVertical = true;
+
+    // Scroll to cells with proper timing
+    const scrollAndHighlight = () => {
+      if (change.cellA && this.wrapperA) {
+        this.wrapperA.scrollTo({
+          top: change.cellA.offsetTop - this.wrapperA.clientHeight / 2 + change.cellA.clientHeight / 2,
+          left: change.cellA.offsetLeft - this.wrapperA.clientWidth / 2 + change.cellA.clientWidth / 2,
+          behavior: 'smooth',
+        });
+        change.cellA.classList.add('cell-highlighted');
+      }
+
+      if (change.cellB && this.wrapperB) {
+        this.wrapperB.scrollTo({
+          top: change.cellB.offsetTop - this.wrapperB.clientHeight / 2 + change.cellB.clientHeight / 2,
+          left: change.cellB.offsetLeft - this.wrapperB.clientWidth / 2 + change.cellB.clientWidth / 2,
+          behavior: 'smooth',
+        });
+        change.cellB.classList.add('cell-highlighted');
+      }
+    };
+
+    // Execute scroll
+    scrollAndHighlight();
+
+    // Resume synchronized scrolling
+    setTimeout(() => {
+      this.syncEnabled = originalSyncState;
+      this.isSyncingVertical = false;
+    }, 600);
+
+    // Remove highlight after animation
+    setTimeout(() => {
+      if (change.cellA) change.cellA.classList.remove('cell-highlighted');
+      if (change.cellB) change.cellB.classList.remove('cell-highlighted');
+    }, 1500);
+
+    console.log(`🎯 Navigated to change ${this.currentChangeIndex + 1}/${this.changedCells.length} at (${change.row}, ${change.col})`);
+  },
+
+  /**
+   * Update navigation UI (counter and button states)
+   */
+  updateNavigationUI() {
+    if (!this.counterDisplay || !this.prevBtn || !this.nextBtn) return;
+
+    const total = this.changedCells.length;
+    const current = this.currentChangeIndex >= 0 ? this.currentChangeIndex + 1 : 0;
+
+    this.counterDisplay.textContent = `${current} / ${total}`;
+
+    // Disable buttons if no changes
+    if (total === 0) {
+      this.prevBtn.disabled = true;
+      this.nextBtn.disabled = true;
+    } else {
+      this.prevBtn.disabled = false;
+      this.nextBtn.disabled = false;
     }
   },
 
@@ -398,7 +622,7 @@ const DiffViewer = {
       const rename = this.currentDiffResult.sheetChanges.renamed.find((r) => r.to === sheetName);
 
       if (rename) {
-        // 🔥 FIX 4: Use new name to get cellDiff
+        // Use new name to get cellDiff
         const cellDiff = this.currentDiffResult.cellDiffs[rename.to];
 
         console.log('📊 Renamed sheet cell diff:', cellDiff);
@@ -417,6 +641,7 @@ const DiffViewer = {
     setTimeout(() => {
       this.setupSyncScroll();
       this.rebindTooltipEvents();
+      this.collectChangedCells();
     }, 100);
   },
 
@@ -596,4 +821,5 @@ const DiffViewer = {
 document.addEventListener('DOMContentLoaded', () => {
   DiffViewer.initSyncButton();
   DiffViewer.initTooltip();
+  DiffViewer.initChangeNavigation();
 });

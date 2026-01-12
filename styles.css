@@ -449,10 +449,106 @@ body {
 }
 
 /* ============================================
+   CHANGE NAVIGATION
+   ============================================ */
+.change-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid #0f7c41;
+  border-radius: 6px;
+  background: white;
+  padding: 8px 16px;
+  color: #0f7c41;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.nav-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(15, 124, 65, 0.3);
+  background: #0f7c41;
+  color: white;
+}
+
+.nav-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  border-color: #ccc;
+  color: #999;
+}
+
+.change-counter {
+  min-width: 80px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: white;
+  color: #0f7c41;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Highlighted cell (current change) */
+.cell-highlighted {
+  position: relative;
+  animation: highlightPulse 1.5s ease-in-out;
+  box-shadow: 0 0 0 3px #0f7c41 !important;
+  outline: 3px solid #0f7c41 !important;
+  outline-offset: -3px;
+  z-index: 100;
+}
+
+@keyframes highlightPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px #0f7c41;
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(15, 124, 65, 0.4);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .change-navigation {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .change-counter {
+    min-width: 60px;
+    font-size: 12px;
+  }
+}
+
+/* ============================================
    LEGEND
    ============================================ */
 .legend {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 30px;
   margin-bottom: 20px;
@@ -560,6 +656,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 
 .sync-button {

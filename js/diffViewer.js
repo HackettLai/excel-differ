@@ -206,45 +206,71 @@ const DiffViewer = {
     });
 
     // Temporarily disable synchronized scrolling to avoid interfering with positioning.
-    const originalSyncState = this.syncEnabled;
     this.syncEnabled = false;
     this.isSyncingVertical = true;
 
-    // Scroll to cells with proper timing
-    const scrollAndHighlight = () => {
-      if (change.cellA && this.wrapperA) {
-        this.wrapperA.scrollTo({
-          top: change.cellA.offsetTop - this.wrapperA.clientHeight / 2 + change.cellA.clientHeight / 2,
-          left: change.cellA.offsetLeft - this.wrapperA.clientWidth / 2 + change.cellA.clientWidth / 2,
-          behavior: 'smooth',
-        });
+    // Clear any pending sync timeout
+    if (this.verticalSyncTimeoutId) {
+      clearTimeout(this.verticalSyncTimeoutId);
+      this.verticalSyncTimeoutId = null;
+    }
+
+    // Scroll and highlight cells
+    if (change.cellA && this.wrapperA) {
+      const targetTop = change.cellA.offsetTop - this.wrapperA.clientHeight / 2 + change.cellA.clientHeight / 2;
+      const targetLeft = change.cellA.offsetLeft - this.wrapperA.clientWidth / 2 + change.cellA.clientWidth / 2;
+
+      this.wrapperA.scrollTo({
+        top: Math.max(0, targetTop),
+        left: Math.max(0, targetLeft),
+        behavior: 'smooth',
+      });
+
+      // Add highlight after a short delay to ensure visibility
+      setTimeout(() => {
         change.cellA.classList.add('cell-highlighted');
-      }
+      }, 100);
+    }
 
-      if (change.cellB && this.wrapperB) {
-        this.wrapperB.scrollTo({
-          top: change.cellB.offsetTop - this.wrapperB.clientHeight / 2 + change.cellB.clientHeight / 2,
-          left: change.cellB.offsetLeft - this.wrapperB.clientWidth / 2 + change.cellB.clientWidth / 2,
-          behavior: 'smooth',
-        });
+    if (change.cellB && this.wrapperB) {
+      const targetTop = change.cellB.offsetTop - this.wrapperB.clientHeight / 2 + change.cellB.clientHeight / 2;
+      const targetLeft = change.cellB.offsetLeft - this.wrapperB.clientWidth / 2 + change.cellB.clientWidth / 2;
+
+      this.wrapperB.scrollTo({
+        top: Math.max(0, targetTop),
+        left: Math.max(0, targetLeft),
+        behavior: 'smooth',
+      });
+
+      // Add highlight after a short delay to ensure visibility
+      setTimeout(() => {
         change.cellB.classList.add('cell-highlighted');
-      }
-    };
+      }, 100);
+    }
 
-    // Execute scroll
-    scrollAndHighlight();
-
-    // Resume synchronized scrolling
+    // Forced synchronized scrolling after scrolling is complete
     setTimeout(() => {
-      this.syncEnabled = originalSyncState;
       this.isSyncingVertical = false;
-    }, 600);
+
+      // Force enable sync scroll if it was disabled
+      if (!this.syncEnabled) {
+        this.syncEnabled = true;
+        const syncBtn = document.getElementById('syncToggle');
+        if (syncBtn) {
+          syncBtn.classList.add('active');
+          syncBtn.querySelector('.sync-text').textContent = 'Sync Scroll';
+        }
+        console.log('✅ Sync scroll force enabled after navigation');
+      } else {
+        console.log('✅ Sync scroll already enabled');
+      }
+    }, 800);
 
     // Remove highlight after animation
     setTimeout(() => {
       if (change.cellA) change.cellA.classList.remove('cell-highlighted');
       if (change.cellB) change.cellB.classList.remove('cell-highlighted');
-    }, 1500);
+    }, 1800);
 
     console.log(`🎯 Navigated to change ${this.currentChangeIndex + 1}/${this.changedCells.length} at (${change.row}, ${change.col})`);
   },

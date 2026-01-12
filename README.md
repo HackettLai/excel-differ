@@ -2,7 +2,7 @@
 
 A web-based Excel file comparison tool that helps you identify differences between two Excel files quickly and easily.
 
-![Excel Differ](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Excel Differ](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 
@@ -18,6 +18,7 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 - **📊 Cell-Level Diff** - Highlights individual cell changes with detailed tooltips
 - **🔄 Smart Rename Detection** - Automatically detects renamed sheets based on content similarity
 - **↔️ Synchronized Scrolling** - Side-by-side view with synchronized horizontal and vertical scrolling
+- **🎯 Change Navigation** - Jump between changes with Previous/Next buttons or keyboard shortcuts (P/N)
 - **💡 Visual Indicators** - Color-coded cells for easy identification of changes
 - **📱 Responsive Design** - Works on desktop and mobile devices
 - **🚀 No Server Required** - Runs entirely in your browser
@@ -94,6 +95,10 @@ That's it! No build process or dependencies to install.
    - Navigate between sheets using the tab bar
    - Hover over highlighted cells to see old vs new values
    - Use synchronized scrolling to compare side-by-side
+   - **Jump to changes:**
+     - Click "Previous" or "Next" buttons to navigate between changes
+     - Use keyboard shortcuts: `P` for previous, `N` for next
+     - Track your position with the change counter (e.g., "5 / 23")
 
 ### Understanding the Results
 
@@ -157,6 +162,17 @@ The tool uses content-based similarity comparison to detect renamed sheets:
 - Analyzes first 10 rows of data
 - Calculates similarity score (85% threshold)
 - Shows confidence percentage in results
+
+### Change Navigation
+
+Quickly navigate through all cell-level changes:
+
+- **Previous/Next Buttons** - Navigate sequentially through changes
+- **Keyboard Shortcuts** - Press `P` for previous, `N` for next
+- **Change Counter** - Shows current position and total changes (e.g., "5 / 23")
+- **Auto-Scroll** - Automatically scrolls changed cells into view
+- **Visual Highlight** - Briefly highlights the target cell for easy identification
+- **Auto-Enable Sync** - Automatically enables synchronized scrolling after navigation
 
 ### Synchronized Scrolling
 

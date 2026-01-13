@@ -375,7 +375,7 @@ body {
 
 .table-wrapper {
   position: relative;
-  max-height: calc(100dvh - 560px);
+  max-height: calc(100dvh - 416px);
   overflow: auto;
   /* Safari scroll optimization */
   -webkit-overflow-scrolling: touch;
@@ -555,6 +555,14 @@ body {
   border-radius: 8px;
   background: #f8f9fa;
   padding: 10px 20px;
+}
+
+.legend-group {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
 }
 
 .legend-item {

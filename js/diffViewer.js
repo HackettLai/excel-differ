@@ -12,6 +12,7 @@ const DiffViewer = {
   wrapperB: null,
   HEADER_HEIGHT: 38,
   verticalSyncTimeoutId: null,
+  navigationTimeoutId: null,
   tooltipElement: null,
   currentTooltipCell: null,
   changedCells: [],
@@ -180,6 +181,12 @@ const DiffViewer = {
       return;
     }
 
+    // 🔥 Clear any pending navigation to prevent rapid clicking issues
+    if (this.navigationTimeoutId) {
+      clearTimeout(this.navigationTimeoutId);
+      this.navigationTimeoutId = null;
+    }
+
     // Calculate new index
     if (direction === 'next') {
       this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changedCells.length;
@@ -187,9 +194,15 @@ const DiffViewer = {
       this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changedCells.length) % this.changedCells.length;
     }
 
-    const change = this.changedCells[this.currentChangeIndex];
-    this.scrollToChange(change);
+    // 🔥 Update UI immediately for better UX
     this.updateNavigationUI();
+
+    // 🔥 Debounce the scroll action slightly (50ms)
+    this.navigationTimeoutId = setTimeout(() => {
+      const change = this.changedCells[this.currentChangeIndex];
+      this.scrollToChange(change);
+      this.navigationTimeoutId = null;
+    }, 50);
   },
 
   /**
@@ -205,7 +218,7 @@ const DiffViewer = {
       cell.classList.remove('cell-highlighted');
     });
 
-    // Temporarily disable synchronized scrolling to avoid interfering with positioning.
+    // Temporarily disable synchronized scrolling
     this.syncEnabled = false;
     this.isSyncingVertical = true;
 
@@ -215,7 +228,7 @@ const DiffViewer = {
       this.verticalSyncTimeoutId = null;
     }
 
-    // Scroll and highlight cells
+    // 🔥 Use instant scroll instead of smooth
     if (change.cellA && this.wrapperA) {
       const targetTop = change.cellA.offsetTop - this.wrapperA.clientHeight / 2 + change.cellA.clientHeight / 2;
       const targetLeft = change.cellA.offsetLeft - this.wrapperA.clientWidth / 2 + change.cellA.clientWidth / 2;
@@ -223,13 +236,10 @@ const DiffViewer = {
       this.wrapperA.scrollTo({
         top: Math.max(0, targetTop),
         left: Math.max(0, targetLeft),
-        behavior: 'smooth',
+        behavior: 'auto',
       });
 
-      // Add highlight after a short delay to ensure visibility
-      setTimeout(() => {
-        change.cellA.classList.add('cell-highlighted');
-      }, 100);
+      change.cellA.classList.add('cell-highlighted');
     }
 
     if (change.cellB && this.wrapperB) {
@@ -239,20 +249,16 @@ const DiffViewer = {
       this.wrapperB.scrollTo({
         top: Math.max(0, targetTop),
         left: Math.max(0, targetLeft),
-        behavior: 'smooth',
+        behavior: 'auto',
       });
 
-      // Add highlight after a short delay to ensure visibility
-      setTimeout(() => {
-        change.cellB.classList.add('cell-highlighted');
-      }, 100);
+      change.cellB.classList.add('cell-highlighted');
     }
 
-    // Forced synchronized scrolling after scrolling is complete
+    // Force enable sync scroll after navigation
     setTimeout(() => {
       this.isSyncingVertical = false;
 
-      // Force enable sync scroll if it was disabled
       if (!this.syncEnabled) {
         this.syncEnabled = true;
         const syncBtn = document.getElementById('syncToggle');
@@ -261,16 +267,14 @@ const DiffViewer = {
           syncBtn.querySelector('.sync-text').textContent = 'Sync Scroll';
         }
         console.log('✅ Sync scroll force enabled after navigation');
-      } else {
-        console.log('✅ Sync scroll already enabled');
       }
-    }, 800);
+    }, 200);
 
     // Remove highlight after animation
     setTimeout(() => {
       if (change.cellA) change.cellA.classList.remove('cell-highlighted');
       if (change.cellB) change.cellB.classList.remove('cell-highlighted');
-    }, 1800);
+    }, 1500);
 
     console.log(`🎯 Navigated to change ${this.currentChangeIndex + 1}/${this.changedCells.length} at (${change.row}, ${change.col})`);
   },

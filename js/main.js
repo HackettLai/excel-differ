@@ -125,6 +125,9 @@ const App = {
 
     // Show upload section
     document.getElementById('uploadSection').style.display = 'block';
+    
+    // Show Header
+    document.querySelector('.header').style.display = 'block';
 
     // Reset files
     FileHandler.reset();

@@ -20,6 +20,9 @@ const SummaryView = {
     // Hide upload section
     document.getElementById('uploadSection').style.display = 'none';
 
+    // Hide Header
+    document.querySelector('.header').style.display = 'none';
+
     // Show summary section
     document.getElementById('summarySection').style.display = 'block';
 

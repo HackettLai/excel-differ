@@ -1,28 +1,36 @@
 // diffViewer.js - Diff Viewer Module (FIXED)
 
 const DiffViewer = {
+  // Core data
   currentDiffResult: null,
   currentFileA: null,
   currentFileB: null,
   currentSheet: null,
   currentStatus: null,
+
+  // Scroll synchronization state
   isSyncingVertical: false,
   syncEnabled: true,
   wrapperA: null,
   wrapperB: null,
   HEADER_HEIGHT: 38,
   verticalSyncTimeoutId: null,
+
+  // Change navigation state
   navigationTimeoutId: null,
-  tooltipElement: null,
-  currentTooltipCell: null,
   changedCells: [],
   currentChangeIndex: -1,
   prevBtn: null,
   nextBtn: null,
   counterDisplay: null,
 
+  // Tooltip state
+  tooltipElement: null,
+  currentTooltipCell: null,
+
   /**
    * Initialize the sync scroll toggle button
+   * Sets up click event listener for the sync button
    */
   initSyncButton() {
     const syncBtn = document.getElementById('syncToggle');
@@ -34,7 +42,8 @@ const DiffViewer = {
   },
 
   /**
-   * Initialize the change navigation buttons
+   * Initialize the change navigation system
+   * Sets up Previous/Next buttons and keyboard shortcuts (P/N)
    */
   initChangeNavigation() {
     this.prevBtn = document.getElementById('prevChangeBtn');
@@ -46,19 +55,18 @@ const DiffViewer = {
       return;
     }
 
-    // Previous button click
+    // Bind click events to navigation buttons
     this.prevBtn.addEventListener('click', () => {
       this.navigateToChange('prev');
     });
 
-    // Next button click
     this.nextBtn.addEventListener('click', () => {
       this.navigateToChange('next');
     });
 
-    // Keyboard shortcuts
+    // Set up keyboard shortcuts for navigation
+    // P = Previous, N = Next (only when diff section is visible)
     document.addEventListener('keydown', (e) => {
-      // Only work when diff section is visible
       if (document.getElementById('diffSection').style.display !== 'block') return;
 
       if (e.key === 'n' || e.key === 'N') {
@@ -74,8 +82,9 @@ const DiffViewer = {
   },
 
   /**
-   * Collect all changed cells from both tables
-   * Builds an array of cell references for navigation
+   * Collect all changed cells from both comparison tables
+   * Builds an ordered array of cell references for navigation
+   * Each cell stores its position and references to both table A and B cells
    */
   collectChangedCells() {
     this.changedCells = [];
@@ -89,19 +98,27 @@ const DiffViewer = {
       return;
     }
 
-    // Collect from both tables (use Set to avoid duplicates)
+    // Use a Set to prevent duplicate entries for the same cell position
     const cellSet = new Set();
 
-    // Helper function to collect cells from a table
+    /**
+     * Helper function to collect changed cells from a single table
+     * @param {HTMLElement} table - The table element to scan
+     * @param {string} side - Either 'A' or 'B' to identify which table
+     */
     const collectFromTable = (table, side) => {
+      // Find all cells with change classes (modified, added, or removed)
       const cells = table.querySelectorAll('td.cell-modified, td.cell-added, td.cell-removed');
+
       cells.forEach((cell) => {
         const row = cell.parentElement;
         const rowIndex = Array.from(row.parentElement.children).indexOf(row);
-        const colIndex = Array.from(row.children).indexOf(cell) - 1; // -1 to skip row header
+        const colIndex = Array.from(row.children).indexOf(cell) - 1; // -1 to exclude row header
 
         if (colIndex >= 0) {
           const key = `${rowIndex}-${colIndex}`;
+
+          // Only add if we haven't seen this position before
           if (!cellSet.has(key)) {
             cellSet.add(key);
             this.changedCells.push({
@@ -116,10 +133,11 @@ const DiffViewer = {
       });
     };
 
+    // Collect from both tables
     collectFromTable(tableA, 'A');
     collectFromTable(tableB, 'B');
 
-    // Sort by row, then by column
+    // Sort changes by position: first by row, then by column
     this.changedCells.sort((a, b) => {
       if (a.row !== b.row) return a.row - b.row;
       return a.col - b.col;
@@ -130,11 +148,11 @@ const DiffViewer = {
   },
 
   /**
-   * Get cell at specific row and column from a table
-   * @param {HTMLElement} table - The table element
-   * @param {number} rowIndex - Row index
-   * @param {number} colIndex - Column index (0-based, excluding row header)
-   * @returns {HTMLElement|null} The cell element or null
+   * Get a specific cell element from a table by row and column index
+   * @param {HTMLElement} table - The table element to search
+   * @param {number} rowIndex - Zero-based row index
+   * @param {number} colIndex - Zero-based column index (excluding row header)
+   * @returns {HTMLElement|null} The cell element, or null if not found
    */
   getCellAt(table, rowIndex, colIndex) {
     const tbody = table.querySelector('tbody');
@@ -146,14 +164,15 @@ const DiffViewer = {
     const row = rows[rowIndex];
     const cells = row.querySelectorAll('td');
 
-    // +1 because first cell is row header
+    // +1 because the first cell is the row header
     if (colIndex + 1 >= cells.length) return null;
 
     return cells[colIndex + 1];
   },
 
   /**
-   * Initialize the tooltip element and event listeners
+   * Initialize the custom tooltip system
+   * Sets up the tooltip element and mouse tracking for positioning
    */
   initTooltip() {
     this.tooltipElement = document.getElementById('customTooltip');
@@ -162,7 +181,7 @@ const DiffViewer = {
     } else {
       console.log('✅ Tooltip element found!');
 
-      // Update tooltip position on mouse move
+      // Track mouse movement to update tooltip position in real-time
       document.addEventListener('mousemove', (e) => {
         if (this.currentTooltipCell && this.tooltipElement.classList.contains('visible')) {
           this.updateTooltipPosition(e.clientX, e.clientY);
@@ -172,8 +191,9 @@ const DiffViewer = {
   },
 
   /**
-   * Navigate to the next or previous change
-   * @param {string} direction - 'next' or 'prev'
+   * Navigate to the next or previous change in the list
+   * Uses debouncing to handle rapid clicking smoothly
+   * @param {string} direction - Either 'next' or 'prev'
    */
   navigateToChange(direction) {
     if (this.changedCells.length === 0) {
@@ -181,23 +201,23 @@ const DiffViewer = {
       return;
     }
 
-    // 🔥 Clear any pending navigation to prevent rapid clicking issues
+    // Cancel any pending navigation to prevent scrolling conflicts
     if (this.navigationTimeoutId) {
       clearTimeout(this.navigationTimeoutId);
       this.navigationTimeoutId = null;
     }
 
-    // Calculate new index
+    // Calculate the new index (wraps around at boundaries)
     if (direction === 'next') {
       this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changedCells.length;
     } else if (direction === 'prev') {
       this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changedCells.length) % this.changedCells.length;
     }
 
-    // 🔥 Update UI immediately for better UX
+    // Update the counter immediately for responsive feedback
     this.updateNavigationUI();
 
-    // 🔥 Debounce the scroll action slightly (50ms)
+    // Delay the scroll action slightly to prevent conflicts when clicking rapidly
     this.navigationTimeoutId = setTimeout(() => {
       const change = this.changedCells[this.currentChangeIndex];
       this.scrollToChange(change);
@@ -206,19 +226,19 @@ const DiffViewer = {
   },
 
   /**
-   * Scroll both tables to show the specified change
-   * Highlights the cells temporarily
-   * @param {Object} change - Change object with cellA and cellB
+   * Scroll both tables to display a specific change
+   * Centers the changed cells in the viewport and highlights them temporarily
+   * @param {Object} change - Change object containing cellA and cellB references
    */
   scrollToChange(change) {
     if (!change) return;
 
-    // Remove previous highlights
+    // Clear any existing highlights from previous navigation
     document.querySelectorAll('.cell-highlighted').forEach((cell) => {
       cell.classList.remove('cell-highlighted');
     });
 
-    // Temporarily disable synchronized scrolling
+    // Temporarily disable scroll synchronization to avoid interference
     this.syncEnabled = false;
     this.isSyncingVertical = true;
 
@@ -228,7 +248,7 @@ const DiffViewer = {
       this.verticalSyncTimeoutId = null;
     }
 
-    // 🔥 Use instant scroll instead of smooth
+    // Scroll table A to center the changed cell
     if (change.cellA && this.wrapperA) {
       const targetTop = change.cellA.offsetTop - this.wrapperA.clientHeight / 2 + change.cellA.clientHeight / 2;
       const targetLeft = change.cellA.offsetLeft - this.wrapperA.clientWidth / 2 + change.cellA.clientWidth / 2;
@@ -236,12 +256,13 @@ const DiffViewer = {
       this.wrapperA.scrollTo({
         top: Math.max(0, targetTop),
         left: Math.max(0, targetLeft),
-        behavior: 'auto',
+        behavior: 'auto', // Instant scroll for faster navigation
       });
 
       change.cellA.classList.add('cell-highlighted');
     }
 
+    // Scroll table B to center the changed cell
     if (change.cellB && this.wrapperB) {
       const targetTop = change.cellB.offsetTop - this.wrapperB.clientHeight / 2 + change.cellB.clientHeight / 2;
       const targetLeft = change.cellB.offsetLeft - this.wrapperB.clientWidth / 2 + change.cellB.clientWidth / 2;
@@ -255,7 +276,7 @@ const DiffViewer = {
       change.cellB.classList.add('cell-highlighted');
     }
 
-    // Force enable sync scroll after navigation
+    // Re-enable scroll synchronization after scrolling completes
     setTimeout(() => {
       this.isSyncingVertical = false;
 
@@ -270,7 +291,7 @@ const DiffViewer = {
       }
     }, 200);
 
-    // Remove highlight after animation
+    // Remove highlight effect after animation completes
     setTimeout(() => {
       if (change.cellA) change.cellA.classList.remove('cell-highlighted');
       if (change.cellB) change.cellB.classList.remove('cell-highlighted');
@@ -280,7 +301,34 @@ const DiffViewer = {
   },
 
   /**
-   * Update navigation UI (counter and button states)
+   * Find the nearest change to a given cell position
+   * Uses Manhattan distance (sum of row and column differences)
+   * @param {number} row - Zero-based row index
+   * @param {number} col - Zero-based column index
+   * @returns {number} Index of the nearest change, or -1 if no changes exist
+   */
+  findNearestChangeIndex(row, col) {
+    if (this.changedCells.length === 0) return -1;
+
+    let nearestIndex = 0;
+    let minDistance = Infinity;
+
+    this.changedCells.forEach((change, index) => {
+      // Calculate Manhattan distance: |row1 - row2| + |col1 - col2|
+      const distance = Math.abs(change.row - row) + Math.abs(change.col - col);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex;
+  },
+
+  /**
+   * Update the navigation UI elements (counter and button states)
+   * Displays current position like "5 / 23" and disables buttons when appropriate
    */
   updateNavigationUI() {
     if (!this.counterDisplay || !this.prevBtn || !this.nextBtn) return;
@@ -290,7 +338,7 @@ const DiffViewer = {
 
     this.counterDisplay.textContent = `${current} / ${total}`;
 
-    // Disable buttons if no changes
+    // Disable navigation buttons if there are no changes
     if (total === 0) {
       this.prevBtn.disabled = true;
       this.nextBtn.disabled = true;
@@ -301,8 +349,10 @@ const DiffViewer = {
   },
 
   /**
-   * Update tooltip position based on mouse coordinates
-   * Ensures tooltip stays within viewport boundaries
+   * Update tooltip position to follow the mouse cursor
+   * Ensures the tooltip stays within the viewport boundaries
+   * @param {number} x - Mouse X coordinate
+   * @param {number} y - Mouse Y coordinate
    */
   updateTooltipPosition(x, y) {
     if (!this.tooltipElement) return;
@@ -313,12 +363,12 @@ const DiffViewer = {
     let left = x + padding;
     let top = y + padding;
 
-    // Prevent tooltip from going off-screen horizontally
+    // Flip tooltip to the left if it would overflow the right edge
     if (left + tooltipRect.width > window.innerWidth) {
       left = x - tooltipRect.width - padding;
     }
 
-    // Prevent tooltip from going off-screen vertically
+    // Flip tooltip upward if it would overflow the bottom edge
     if (top + tooltipRect.height > window.innerHeight) {
       top = y - tooltipRect.height - padding;
     }
@@ -328,7 +378,10 @@ const DiffViewer = {
   },
 
   /**
-   * Show tooltip with given text at specified coordinates
+   * Display the tooltip with specified text at given coordinates
+   * @param {string} text - Text to display in the tooltip
+   * @param {number} x - Initial X position
+   * @param {number} y - Initial Y position
    */
   showTooltip(text, x, y) {
     if (!this.tooltipElement || !text) return;
@@ -339,7 +392,7 @@ const DiffViewer = {
   },
 
   /**
-   * Hide the tooltip
+   * Hide the tooltip and clear the current cell reference
    */
   hideTooltip() {
     if (!this.tooltipElement) return;
@@ -348,7 +401,9 @@ const DiffViewer = {
   },
 
   /**
-   * Toggle synchronized scrolling on/off
+   * Toggle synchronized scrolling on or off
+   * When enabled, both tables scroll together
+   * When disabled, tables can be scrolled independently
    */
   toggleSync() {
     this.syncEnabled = !this.syncEnabled;
@@ -358,7 +413,7 @@ const DiffViewer = {
       syncBtn.classList.add('active');
       syncBtn.querySelector('.sync-text').textContent = 'Sync Scroll';
 
-      // Realign scroll positions when sync is enabled
+      // Realign the scroll positions when re-enabling sync
       requestAnimationFrame(() => {
         this.realignScroll();
       });
@@ -370,8 +425,10 @@ const DiffViewer = {
   },
 
   /**
-   * Get the row number of the first visible row in a wrapper
-   * Accounts for header height offset
+   * Get the row number of the first fully visible row in a wrapper
+   * Accounts for the sticky header height
+   * @param {HTMLElement} wrapper - The table wrapper element
+   * @returns {number|null} Row number (1-based), or null if not found
    */
   getFirstVisibleRowNumber(wrapper) {
     if (!wrapper) return null;
@@ -387,7 +444,7 @@ const DiffViewer = {
 
     const scrollTop = wrapper.scrollTop + this.HEADER_HEIGHT;
 
-    // Find the first row whose bottom edge is below the scroll position
+    // Find the first row whose bottom edge is below the current scroll position
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowTop = row.offsetTop;
@@ -405,8 +462,10 @@ const DiffViewer = {
   },
 
   /**
-   * Scroll wrapper to display the specified row number
-   * Returns true if successful, false otherwise
+   * Scroll a wrapper to display a specific row number
+   * @param {HTMLElement} wrapper - The table wrapper to scroll
+   * @param {number} rowNumber - The row number to scroll to (1-based)
+   * @returns {boolean} True if successful, false if row not found
    */
   scrollToRowNumber(wrapper, rowNumber) {
     if (!wrapper) return false;
@@ -419,7 +478,7 @@ const DiffViewer = {
 
     const rows = tbody.querySelectorAll('tr');
 
-    // Find the row with matching row number
+    // Find the row with the matching row number
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowHeader = row.querySelector('.row-header');
@@ -435,8 +494,9 @@ const DiffViewer = {
   },
 
   /**
-   * Realign scroll positions of both wrappers
-   * Syncs to the earlier row and averages horizontal scroll
+   * Realign the scroll positions of both wrappers
+   * Syncs to the earlier row and averages the horizontal scroll positions
+   * Used when re-enabling synchronized scrolling
    */
   realignScroll() {
     if (!this.wrapperA || !this.wrapperB) return;
@@ -448,7 +508,7 @@ const DiffViewer = {
       return;
     }
 
-    // Sync to the earlier (smaller) row number
+    // Sync to the earlier (smaller) row number to avoid scrolling past content
     const targetRowNumber = Math.min(rowNumberA || Infinity, rowNumberB || Infinity);
 
     this.isSyncingVertical = true;
@@ -457,12 +517,12 @@ const DiffViewer = {
     this.scrollToRowNumber(this.wrapperA, targetRowNumber);
     this.scrollToRowNumber(this.wrapperB, targetRowNumber);
 
-    // Average the horizontal scroll positions
+    // Average the horizontal scroll positions for consistency
     const avgScrollLeft = (this.wrapperA.scrollLeft + this.wrapperB.scrollLeft) / 2;
     this.wrapperA.scrollLeft = avgScrollLeft;
     this.wrapperB.scrollLeft = avgScrollLeft;
 
-    // Reset syncing flag after a delay
+    // Reset the syncing flag after a short delay
     if (this.verticalSyncTimeoutId) {
       clearTimeout(this.verticalSyncTimeoutId);
     }
@@ -474,6 +534,9 @@ const DiffViewer = {
 
   /**
    * Synchronize vertical scroll position from source to target wrapper
+   * Matches the first visible row between tables
+   * @param {HTMLElement} sourceWrapper - The wrapper being scrolled by the user
+   * @param {HTMLElement} targetWrapper - The wrapper to sync to
    */
   syncVertical(sourceWrapper, targetWrapper) {
     const sourceRowNumber = this.getFirstVisibleRowNumber(sourceWrapper);
@@ -485,19 +548,23 @@ const DiffViewer = {
 
   /**
    * Synchronize horizontal scroll position from source to target wrapper
+   * Simply copies the scrollLeft value
+   * @param {HTMLElement} sourceWrapper - The wrapper being scrolled
+   * @param {HTMLElement} targetWrapper - The wrapper to sync to
    */
   syncHorizontal(sourceWrapper, targetWrapper) {
     targetWrapper.scrollLeft = sourceWrapper.scrollLeft;
   },
 
   /**
-   * Display the diff viewer with the specified sheet and status
-   * @param {Object} diffResult - The diff comparison result
-   * @param {Object} fileA - Parsed file A
-   * @param {Object} fileB - Parsed file B
+   * Display the diff viewer for a specific sheet
+   * Hides the summary view and shows side-by-side comparison tables
+   * @param {Object} diffResult - The complete diff comparison result
+   * @param {Object} fileA - Parsed data from file A
+   * @param {Object} fileB - Parsed data from file B
    * @param {string} sheetName - Name of the sheet to display
-   * @param {string} status - Status: 'modified', 'added', 'removed', or 'renamed'
-   * @param {string|null} viewSide - Optional side to view
+   * @param {string} status - Sheet status: 'modified', 'added', 'removed', or 'renamed'
+   * @param {string|null} viewSide - Optional: 'A' or 'B' for single-sided view
    */
   show(diffResult, fileA, fileB, sheetName, status = 'modified', viewSide = null) {
     this.currentDiffResult = diffResult;
@@ -506,31 +573,32 @@ const DiffViewer = {
     this.currentSheet = sheetName;
     this.currentStatus = status;
 
-    // Hide summary view
+    // Hide the summary view
     SummaryView.hide();
 
-    // Show diff section
+    // Show the diff comparison section
     document.getElementById('diffSection').style.display = 'block';
 
-    // Update sheet title
+    // Update the sheet title display
     document.getElementById('currentSheetTitle').textContent = `Sheet: ${sheetName}`;
 
-    // Update file names
+    // Update the file name labels
     document.getElementById('fileAName').textContent = diffResult.fileA;
     document.getElementById('fileBName').textContent = diffResult.fileB;
 
-    // Initialize navigation bar
+    // Initialize the sheet navigation bar
     NavBar.init(diffResult, fileA, fileB, sheetName, (name, status, side) => {
       this.show(diffResult, fileA, fileB, name, status, side);
     });
 
-    // Render comparison tables
+    // Render the comparison tables
     this.renderTables(sheetName, status, viewSide);
   },
 
   /**
    * Set up synchronized scrolling between both table wrappers
-   * Handles both vertical and horizontal scroll synchronization
+   * Clones the wrappers to remove old event listeners and adds new ones
+   * Handles both vertical (row-based) and horizontal scroll synchronization
    */
   setupSyncScroll() {
     this.wrapperA = document.querySelector('#diffPaneA .table-wrapper');
@@ -542,7 +610,8 @@ const DiffViewer = {
     }
 
     /**
-     * Check if wrapper is scrollable and add appropriate classes
+     * Check if a wrapper is scrollable and add appropriate CSS classes
+     * Used to show/hide scroll shadow overlays
      */
     const checkScrollable = (wrapper, name) => {
       const pane = wrapper.closest('.diff-pane');
@@ -560,7 +629,7 @@ const DiffViewer = {
     checkScrollable(this.wrapperA, 'wrapperA');
     checkScrollable(this.wrapperB, 'wrapperB');
 
-    // Clone nodes to remove old event listeners
+    // Clone wrappers to remove all old event listeners
     const newWrapperA = this.wrapperA.cloneNode(true);
     const newWrapperB = this.wrapperB.cloneNode(true);
 
@@ -576,17 +645,17 @@ const DiffViewer = {
       () => {
         if (!this.syncEnabled) return;
 
-        // Sync horizontal scroll immediately
+        // Sync horizontal scroll immediately (smooth, no delay needed)
         this.syncHorizontal(this.wrapperA, this.wrapperB);
 
-        // Skip vertical sync if already syncing
+        // Skip vertical sync if already syncing to prevent infinite loops
         if (this.isSyncingVertical) return;
 
-        // Perform vertical sync
+        // Perform vertical sync (row-based)
         this.isSyncingVertical = true;
         this.syncVertical(this.wrapperA, this.wrapperB);
 
-        // Reset syncing flag after delay
+        // Reset the syncing flag after a delay
         if (this.verticalSyncTimeoutId) {
           clearTimeout(this.verticalSyncTimeoutId);
         }
@@ -595,26 +664,22 @@ const DiffViewer = {
           this.verticalSyncTimeoutId = null;
         }, 100);
       },
-      { passive: true }
+      { passive: true } // Improve scroll performance
     );
 
-    // Add scroll event listener to wrapper B
+    // Add scroll event listener to wrapper B (same logic as A)
     this.wrapperB.addEventListener(
       'scroll',
       () => {
         if (!this.syncEnabled) return;
 
-        // Sync horizontal scroll immediately
         this.syncHorizontal(this.wrapperB, this.wrapperA);
 
-        // Skip vertical sync if already syncing
         if (this.isSyncingVertical) return;
 
-        // Perform vertical sync
         this.isSyncingVertical = true;
         this.syncVertical(this.wrapperB, this.wrapperA);
 
-        // Reset syncing flag after delay
         if (this.verticalSyncTimeoutId) {
           clearTimeout(this.verticalSyncTimeoutId);
         }
@@ -631,20 +696,21 @@ const DiffViewer = {
 
   /**
    * Render both comparison tables based on sheet status
-   * @param {string} sheetName - Name of the sheet
+   * Handles different scenarios: added sheets, removed sheets, renamed sheets, and standard comparisons
+   * @param {string} sheetName - Name of the sheet to render
    * @param {string} status - Sheet status: 'added', 'removed', 'renamed', or 'modified'
-   * @param {string|null} viewSide - Optional side to view
+   * @param {string|null} viewSide - Optional: which side to view for single-sided sheets
    */
   renderTables(sheetName, status, viewSide) {
     const tableA = document.getElementById('tableA');
     const tableB = document.getElementById('tableB');
 
     if (status === 'added') {
-      // Sheet only exists in File B
+      // Sheet only exists in File B (newly added sheet)
       this.renderEmptyTable(tableA, 'Sheet does not exist in File A');
       this.renderTable(tableB, sheetName, this.currentFileB, null, 'added');
     } else if (status === 'removed') {
-      // Sheet only exists in File A
+      // Sheet only exists in File A (deleted sheet)
       this.renderTable(tableA, sheetName, this.currentFileA, null, 'removed');
       this.renderEmptyTable(tableB, 'Sheet does not exist in File B');
     } else if (status === 'renamed') {
@@ -652,22 +718,23 @@ const DiffViewer = {
       const rename = this.currentDiffResult.sheetChanges.renamed.find((r) => r.to === sheetName);
 
       if (rename) {
-        // Use new name to get cellDiff
+        // Get cell-level differences using the new name as key
         const cellDiff = this.currentDiffResult.cellDiffs[rename.to];
 
         console.log('📊 Renamed sheet cell diff:', cellDiff);
 
+        // Render using old name for table A, new name for table B
         this.renderTable(tableA, rename.from, this.currentFileA, cellDiff, 'comparison');
         this.renderTable(tableB, rename.to, this.currentFileB, cellDiff, 'comparison');
       }
     } else {
-      // Standard comparison (modified or unchanged)
+      // Standard comparison (modified or unchanged sheets)
       const cellDiff = this.currentDiffResult.cellDiffs[sheetName];
       this.renderTable(tableA, sheetName, this.currentFileA, cellDiff, 'comparison');
       this.renderTable(tableB, sheetName, this.currentFileB, cellDiff, 'comparison');
     }
 
-    // Set up sync scroll and rebind tooltip events after render
+    // Set up scroll synchronization and event bindings after DOM updates
     setTimeout(() => {
       this.setupSyncScroll();
       this.rebindTooltipEvents();
@@ -676,19 +743,21 @@ const DiffViewer = {
   },
 
   /**
-   * Rebind tooltip events to all cells with data-tooltip attribute
-   * Called after table re-rendering to ensure tooltips work
+   * Rebind tooltip and click events to all changed cells
+   * Must be called after table re-rendering to ensure events work
+   * Also adds click handlers to update the current change index
    */
   rebindTooltipEvents() {
     const self = this;
 
-    // Remove old event listeners by cloning elements
+    // Remove old event listeners by cloning and replacing elements
     document.querySelectorAll('td[data-tooltip]').forEach((td) => {
       td.replaceWith(td.cloneNode(true));
     });
 
-    // Rebind new event listeners
+    // Rebind fresh event listeners to all cells with tooltips
     document.querySelectorAll('td[data-tooltip]').forEach((td) => {
+      // Show tooltip on mouse enter
       td.addEventListener('mouseenter', function (e) {
         const text = this.dataset.tooltip;
         if (text) {
@@ -698,14 +767,33 @@ const DiffViewer = {
         }
       });
 
+      // Hide tooltip on mouse leave
       td.addEventListener('mouseleave', function () {
         console.log('✅ mouseleave triggered');
         self.hideTooltip();
       });
 
+      // Update tooltip position as mouse moves
       td.addEventListener('mousemove', function (e) {
         if (self.tooltipElement && self.tooltipElement.classList.contains('visible')) {
           self.updateTooltipPosition(e.clientX, e.clientY);
+        }
+      });
+
+      // Add click event to update the current change index
+      // When user clicks a changed cell, find the nearest change and update navigation
+      td.addEventListener('click', function () {
+        const row = this.parentElement;
+        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
+        const colIndex = Array.from(row.children).indexOf(this) - 1; // -1 to skip row header
+
+        if (colIndex >= 0) {
+          const nearestIndex = self.findNearestChangeIndex(rowIndex, colIndex);
+          if (nearestIndex >= 0) {
+            self.currentChangeIndex = nearestIndex;
+            self.updateNavigationUI();
+            console.log(`🎯 Clicked cell (${rowIndex}, ${colIndex}), nearest change: ${nearestIndex + 1}/${self.changedCells.length}`);
+          }
         }
       });
     });
@@ -714,8 +802,10 @@ const DiffViewer = {
   },
 
   /**
-   * Render an empty table with a message
+   * Render an empty table with a centered message
    * Used when a sheet doesn't exist in one of the files
+   * @param {HTMLElement} tableElement - The table element to render into
+   * @param {string} message - The message to display
    */
   renderEmptyTable(tableElement, message) {
     tableElement.innerHTML = `
@@ -728,11 +818,12 @@ const DiffViewer = {
   },
 
   /**
-   * Render a single table with cell diff highlighting
+   * Render a single comparison table with cell-level diff highlighting
+   * Creates a complete HTML table with header row, row numbers, and colored cells
    * @param {HTMLElement} tableElement - The table element to render into
-   * @param {string} sheetName - Name of the sheet
+   * @param {string} sheetName - Name of the sheet to render
    * @param {Object} parsedFile - Parsed Excel file object
-   * @param {Object|null} cellDiff - Cell difference data
+   * @param {Object|null} cellDiff - Cell difference data (null for single-sided views)
    * @param {string} mode - Render mode: 'comparison', 'added', or 'removed'
    */
   renderTable(tableElement, sheetName, parsedFile, cellDiff, mode) {
@@ -745,7 +836,7 @@ const DiffViewer = {
 
     const data = ExcelParser.normalizeData(sheet.data);
 
-    // Create diff map for cell highlighting
+    // Create a lookup map for quick cell diff queries
     let diffMap = null;
     if (cellDiff && mode === 'comparison') {
       diffMap = DiffEngine.createCellDiffMap(cellDiff.changes);
@@ -758,10 +849,12 @@ const DiffViewer = {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
 
+    // Empty cell for the top-left corner
     const emptyTh = document.createElement('th');
     emptyTh.textContent = '';
     headerRow.appendChild(emptyTh);
 
+    // Column headers (A, B, C, ...)
     const maxCols = data.length > 0 ? data[0].length : 0;
     for (let c = 0; c < maxCols; c++) {
       const th = document.createElement('th');
@@ -778,19 +871,19 @@ const DiffViewer = {
     data.forEach((row, rowIndex) => {
       const tr = document.createElement('tr');
 
-      // Add row number header
+      // Add row number header (1, 2, 3, ...)
       const rowHeaderTd = document.createElement('td');
       rowHeaderTd.className = 'row-header';
       rowHeaderTd.textContent = rowIndex + 1;
       tr.appendChild(rowHeaderTd);
 
-      // Add data cells
+      // Add data cells for each column
       row.forEach((cellValue, colIndex) => {
         const td = document.createElement('td');
 
         td.textContent = cellValue || '';
 
-        // Mark empty cells
+        // Mark empty cells with special styling
         if (cellValue === '' || cellValue === null || cellValue === undefined) {
           td.classList.add('cell-empty');
           td.textContent = '(Empty)';
@@ -801,9 +894,10 @@ const DiffViewer = {
           const diff = DiffEngine.getCellDiff(rowIndex, colIndex, diffMap);
 
           if (diff) {
+            // Add appropriate CSS class based on change type
             td.classList.add(`cell-${diff.type}`);
 
-            // Create tooltip text based on diff type
+            // Create tooltip text showing old and new values
             let tooltipText = '';
             if (diff.type === 'modified') {
               tooltipText = `Old Value: ${diff.oldValue}\nNew Value: ${diff.newValue}`;
@@ -813,19 +907,19 @@ const DiffViewer = {
               tooltipText = `Removed: ${diff.oldValue}`;
             }
 
-            // Set tooltip data attribute (event binding happens in rebindTooltipEvents)
+            // Store tooltip text in data attribute (events bound later)
             td.dataset.tooltip = tooltipText;
           } else {
             td.classList.add('cell-unchanged');
           }
         } else if (mode === 'added') {
-          // All cells are added
+          // All cells are marked as added (for new sheets)
           td.classList.add('cell-added');
         } else if (mode === 'removed') {
-          // All cells are removed
+          // All cells are marked as removed (for deleted sheets)
           td.classList.add('cell-removed');
         } else {
-          // No diff highlighting
+          // No highlighting needed
           td.classList.add('cell-unchanged');
         }
 
@@ -840,6 +934,7 @@ const DiffViewer = {
 
   /**
    * Hide the diff viewer and tooltip
+   * Returns to the summary view
    */
   hide() {
     document.getElementById('diffSection').style.display = 'none';
@@ -847,7 +942,7 @@ const DiffViewer = {
   },
 };
 
-// Initialize sync button and tooltip when DOM is ready
+// Initialize all diff viewer systems when the page loads
 document.addEventListener('DOMContentLoaded', () => {
   DiffViewer.initSyncButton();
   DiffViewer.initTooltip();

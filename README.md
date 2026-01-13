@@ -170,6 +170,7 @@ Quickly navigate through all cell-level changes:
 - **Previous/Next Buttons** - Navigate sequentially through changes
 - **Keyboard Shortcuts** - Press `P` for previous, `N` for next
 - **Change Counter** - Shows current position and total changes (e.g., "5 / 23")
+- **Click Cell to Update** - Click on any changed cell to update current change index
 - **Auto-Scroll** - Automatically scrolls changed cells into view
 - **Visual Highlight** - Briefly highlights the target cell for easy identification
 - **Auto-Enable Sync** - Automatically enables synchronized scrolling after navigation

@@ -2,7 +2,7 @@
 
 A web-based Excel file comparison tool that helps you identify differences between two Excel files quickly and easily.
 
-![Excel Differ](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Excel Differ](https://img.shields.io/badge/version-1.1.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 

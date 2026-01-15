@@ -96,11 +96,11 @@ body {
    Header Section
    =========================== */
 .header {
-  color: var(--bg-white);
-  text-align: center;
   background: linear-gradient(-90deg, #50a74d, #165932);
   padding: 30px;
+  color: var(--bg-white);
   color: white;
+  text-align: center;
   text-align: center;
 }
 
@@ -113,7 +113,7 @@ body {
 .header .subtitle {
   opacity: 0.9;
   margin-top: var(--spacing-xs);
-  font-size: 0.95em;
+  font-size: 1em;
 }
 
 /* ===========================
@@ -142,19 +142,19 @@ body {
 
 .upload-area {
   display: flex;
-  width: 100%;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: 30px;
   margin-bottom: 30px;
+  width: 100%;
 }
 
 .upload-box {
   display: flex;
-  gap: 12px;
-  align-items: center;
   flex: 1;
   flex-direction: column;
+  align-items: center;
+  gap: 12px;
   transition: all var(--transition-base);
   cursor: pointer;
   border: 3px dashed var(--border-light);
@@ -198,6 +198,8 @@ body {
   border-radius: 6px;
   background: var(--color-primary);
   padding: 12px 30px;
+  width: -webkit-fit-content;
+  width: -moz-fit-content;
   width: fit-content;
   color: white;
   font-size: 1em;
@@ -230,7 +232,6 @@ body {
 }
 
 .remove-btn {
-  line-height: 0;
   display: flex;
   flex-shrink: 0;
   justify-content: center;
@@ -244,6 +245,7 @@ body {
   height: 24px;
   color: var(--bg-white);
   font-size: 14px;
+  line-height: 0;
 }
 
 .remove-btn:hover {
@@ -253,13 +255,15 @@ body {
 
 /* Start Compare Button */
 .start-compare-btn {
-  width: fit-content;
   transition: all var(--transition-base);
   cursor: pointer;
   border: none;
   border-radius: var(--radius-lg);
   background: var(--color-primary);
   padding: 15px 50px;
+  width: -webkit-fit-content;
+  width: -moz-fit-content;
+  width: fit-content;
   color: var(--bg-white);
   font-weight: 600;
   font-size: 1.1em;
@@ -371,9 +375,9 @@ body {
 
 .sheet-selection-row label {
   display: flex;
+  flex: 1;
   flex-direction: row;
   align-items: center;
-  flex: 1;
   gap: var(--spacing-xs);
   color: var(--color-gray-700);
   font-weight: 500;
@@ -556,6 +560,7 @@ body {
 }
 
 .unified-table thead {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -563,8 +568,9 @@ body {
 }
 
 .unified-table th {
+  box-shadow: inset 0 -2px 0 var(--border-medium);
   border-right: 1px solid var(--color-gray-200);
-  border-bottom: 2px solid var(--border-medium);
+  /* border-bottom: 2px solid var(--border-medium); */
   padding: var(--spacing-sm) 10px;
   color: var(--color-gray-700);
   font-weight: 600;
@@ -602,7 +608,7 @@ body {
 
 /* Index Cells */
 .index-cell {
-  background-color: var(--bg-light);
+  background-color: var(--color-gray-100);
   min-width: 50px;
   color: var(--text-secondary);
   font-weight: 600;
@@ -671,8 +677,8 @@ body {
 }
 
 .empty-cell{
-  font-style: italic;
   color: var(--color-gray-400);
+  font-style: italic;
 }
 
 /* ===========================
@@ -681,10 +687,26 @@ body {
 .cell-highlighted {
   position: relative;
   z-index: 10;
-  animation: highlight-pulse 0.6s ease-in-out;
+  -webkit-animation: highlight-pulse 0.6s ease-in-out;
+          animation: highlight-pulse 0.6s ease-in-out;
   outline: 3px solid var(--color-primary) !important;
   outline-offset: -3px;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+}
+
+@-webkit-keyframes highlight-pulse {
+  0% {
+    outline-color: var(--color-primary);
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+  50% {
+    outline-color: var(--color-primary-dark);
+    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+  }
+  100% {
+    outline-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  }
 }
 
 @keyframes highlight-pulse {
@@ -720,12 +742,19 @@ body {
 }
 
 .spinner {
-  animation: spin 1s linear infinite;
+  -webkit-animation: spin 1s linear infinite;
+          animation: spin 1s linear infinite;
   border: 5px solid rgba(255, 255, 255, 0.3);
   border-top-color: var(--bg-white);
   border-radius: var(--radius-full);
   width: 60px;
   height: 60px;
+}
+
+@-webkit-keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes spin {

@@ -1,60 +1,90 @@
 /**
  * diffEngine.js
- * Excel 比對核心引擎
+ * Excel comparison engine - core logic for comparing two Excel workbooks
+ * Detects differences in sheets, rows, columns, and cell values
  */
 
+/**
+ * DiffEngine Class
+ * Handles all comparison logic between two parsed Excel workbooks
+ * Generates comprehensive diff results including added/deleted/modified sheets and cells
+ */
 class DiffEngine {
+  /**
+   * Constructor
+   * Initializes the diff results structure
+   */
   constructor() {
+    // Results object stores all comparison data
     this.results = {
       summary: {
-        totalSheets: 0,
-        modifiedSheets: 0,
-        addedSheets: 0,
-        deletedSheets: 0
+        totalSheets: 0,      // Total number of unique sheets across both files
+        modifiedSheets: 0,   // Number of sheets with changes
+        addedSheets: 0,      // Number of sheets only in File B (new)
+        deletedSheets: 0     // Number of sheets only in File A (removed)
       },
-      sheets: []
+      sheets: []             // Array of per-sheet comparison results
     };
   }
 
   /**
-   * ✅ 主要比對入口
+   * compare(dataA, dataB)
+   * Main comparison entry point - compares two parsed Excel workbooks
+   * 
+   * @param {Object} dataA - Parsed data from File A (old file)
+   * @param {Object} dataB - Parsed data from File B (new file)
+   * @returns {Object} Complete diff results with summary and per-sheet details
+   * 
+   * Process:
+   * 1. Validates input data
+   * 2. Finds all unique sheet names across both files
+   * 3. For each sheet:
+   *    - If exists in both: compare content
+   *    - If only in B: mark as added
+   *    - If only in A: mark as deleted
+   * 4. Updates summary statistics
    */
   compare(dataA, dataB) {
-    console.log('🔍 開始比對...', { dataA, dataB });
+    console.log('🔍 Starting comparison...', { dataA, dataB });
 
+    // Validate input data
     if (!dataA || !dataB) {
-      console.error('❌ 缺少比對資料');
+      console.error('❌ Missing comparison data');
       return this.results;
     }
 
+    // Get all sheet names from both files
     const sheetsA = new Set(dataA.sheetNames || []);
     const sheetsB = new Set(dataB.sheetNames || []);
 
-    // ✅ 找出所有 sheet 名稱
+    // Combine all unique sheet names
     const allSheets = new Set([...sheetsA, ...sheetsB]);
 
+    // Process each sheet
     allSheets.forEach(sheetName => {
-      const inA = sheetsA.has(sheetName);
-      const inB = sheetsB.has(sheetName);
+      const inA = sheetsA.has(sheetName);  // Sheet exists in File A
+      const inB = sheetsB.has(sheetName);  // Sheet exists in File B
 
+      // Initialize sheet result object
       let sheetResult = {
         sheetName: sheetName,
-        status: 'unchanged',
-        differences: [],
-        rowChanges: [],
-        columnChanges: [],
-        oldData: [],
-        newData: []
+        status: 'unchanged',     // Status: 'unchanged' | 'modified' | 'added' | 'deleted'
+        differences: [],         // Cell-level differences
+        rowChanges: [],          // Added/deleted rows
+        columnChanges: [],       // Added/deleted columns
+        oldData: [],             // Original data from File A
+        newData: []              // New data from File B
       };
 
       if (inA && inB) {
-        // 兩個檔案都有呢個 sheet，進行比對
+        // Sheet exists in both files - perform detailed comparison
         const sheetA = dataA.sheets[sheetName]?.data || [];
         const sheetB = dataB.sheets[sheetName]?.data || [];
 
         sheetResult = this.compareSheets(sheetA, sheetB);
         sheetResult.sheetName = sheetName;
 
+        // Mark as modified if any changes detected
         if (sheetResult.differences.length > 0 || 
             sheetResult.rowChanges.length > 0 || 
             sheetResult.columnChanges.length > 0) {
@@ -62,66 +92,98 @@ class DiffEngine {
           this.results.summary.modifiedSheets++;
         }
       } else if (inB && !inA) {
-        // File B 新增嘅 sheet
+        // Sheet only exists in File B - it's a new sheet
         sheetResult.status = 'added';
         sheetResult.newData = dataB.sheets[sheetName]?.data || [];
         this.results.summary.addedSheets++;
       } else if (inA && !inB) {
-        // File A 有但 File B 冇（被刪除）
+        // Sheet only exists in File A - it was deleted
         sheetResult.status = 'deleted';
         sheetResult.oldData = dataA.sheets[sheetName]?.data || [];
         this.results.summary.deletedSheets++;
       }
 
+      // Add sheet result to results array
       this.results.sheets.push(sheetResult);
     });
 
+    // Update total sheets count
     this.results.summary.totalSheets = allSheets.size;
 
-    console.log('✅ 比對完成', this.results);
+    console.log('✅ Comparison complete', this.results);
     return this.results;
   }
 
   /**
-   * ✅ 比對單個 Sheet
+   * compareSheets(oldData, newData)
+   * Compares two individual sheets in detail
+   * 
+   * @param {Array<Object>} oldData - Sheet data from File A
+   * @param {Array<Object>} newData - Sheet data from File B
+   * @returns {Object} Sheet comparison result with differences, row/column changes
+   * 
+   * Process:
+   * 1. Detects column changes (added/deleted columns)
+   * 2. Detects row changes (added/deleted rows)
+   * 3. Compares cell content for matching rows
    */
   compareSheets(oldData, newData) {
     const result = {
-      differences: [],
-      rowChanges: [],
-      columnChanges: [],
-      oldData: oldData,
-      newData: newData
+      differences: [],     // Array of cell-level differences
+      rowChanges: [],      // Array of added/deleted rows
+      columnChanges: [],   // Array of added/deleted columns
+      oldData: oldData,    // Original sheet data
+      newData: newData     // New sheet data
     };
 
+    // Validate input data
     if (!oldData || !newData || oldData.length === 0 || newData.length === 0) {
       return result;
     }
 
-    // ✅ 偵測欄位變更（只標記新增/刪除）
+    // Detect column changes (added/deleted columns)
     result.columnChanges = this.detectColumnChanges(oldData, newData);
 
-    // ✅ 偵測行變更
+    // Detect row changes (added/deleted rows)
     result.rowChanges = this.detectRowChanges(oldData, newData);
 
-    // ✅ 比對儲存格內容
+    // Compare cell content
     result.differences = this.compareCells(oldData, newData);
 
     return result;
   }
 
   /**
-   * 🔥 只偵測新增/刪除欄位，忽略移位
+   * detectColumnChanges(oldData, newData)
+   * Detects added and deleted columns based on header content
+   * Ignores column position changes (only detects true additions/deletions)
+   * 
+   * @param {Array<Object>} oldData - Sheet data from File A
+   * @param {Array<Object>} newData - Sheet data from File B
+   * @returns {Array<Object>} Array of column change objects
+   * 
+   * Each change object:
+   * {
+   *   column: string,    // Column letter (e.g., 'A', 'B', 'AA')
+   *   type: string,      // 'added' or 'deleted'
+   *   header: string     // Header content or '(Blank Column)'
+   * }
+   * 
+   * Logic:
+   * - Uses first row as headers
+   * - Compares header CONTENT, not column position
+   * - A column is "added" if its header exists in File B but not in File A
+   * - A column is "deleted" if its header exists in File A but not in File B
    */
   detectColumnChanges(oldData, newData) {
     if (!oldData || !newData || oldData.length === 0 || newData.length === 0) {
       return [];
     }
 
-    const oldHeaders = oldData[0];  // 第1行
-    const newHeaders = newData[0];  // 第1行
+    const oldHeaders = oldData[0];  // First row of File A
+    const newHeaders = newData[0];  // First row of File B
 
-    // ✅ 建立 Header 內容 Set（忽略 null/empty）
+    // Build sets of header content (ignore null/empty)
     const oldHeaderSet = new Set();
     const newHeaderSet = new Set();
 
@@ -137,16 +199,16 @@ class DiffEngine {
 
     const changes = [];
 
-    // ✅ 找出新增的欄位（File B 有但 File A 冇的 column letter）
+    // Get column letters
     const oldCols = Object.keys(oldHeaders);
     const newCols = Object.keys(newHeaders);
 
+    // Find added columns (exist in File B but not in File A)
     newCols.forEach(col => {
       const newContent = String(newHeaders[col] || '').trim();
       
-      // 只標記有內容的新欄位
       if (newContent) {
-        // 檢查呢個 header 係咪真係新增（File A 完全冇呢個 header）
+        // Check if this header content is truly new (doesn't exist in File A)
         if (!oldHeaderSet.has(newContent)) {
           changes.push({
             column: col,
@@ -155,7 +217,7 @@ class DiffEngine {
           });
         }
       } else {
-        // 檢查呢個空欄係咪真係新增（File A 冇呢個 column letter）
+        // Check if this blank column is new (column letter doesn't exist in File A)
         if (!oldCols.includes(col)) {
           changes.push({
             column: col,
@@ -166,12 +228,12 @@ class DiffEngine {
       }
     });
 
-    // ✅ 找出刪除的欄位（File A 有但 File B 冇的 header）
+    // Find deleted columns (exist in File A but not in File B)
     oldCols.forEach(col => {
       const oldContent = String(oldHeaders[col] || '').trim();
       
       if (oldContent) {
-        // 檢查呢個 header 係咪真係刪除（File B 完全冇呢個 header）
+        // Check if this header content was deleted (doesn't exist in File B)
         if (!newHeaderSet.has(oldContent)) {
           changes.push({
             column: col,
@@ -180,7 +242,7 @@ class DiffEngine {
           });
         }
       } else {
-        // 檢查呢個空欄係咪真係刪除（File B 冇呢個 column letter）
+        // Check if this blank column was deleted (column letter doesn't exist in File B)
         if (!newCols.includes(col)) {
           changes.push({
             column: col,
@@ -196,32 +258,54 @@ class DiffEngine {
   }
 
   /**
-   * ✅ 偵測行變更（用第1欄做 key）
+   * detectRowChanges(oldData, newData)
+   * Detects added and deleted rows using column A as the row key
+   * 
+   * @param {Array<Object>} oldData - Sheet data from File A
+   * @param {Array<Object>} newData - Sheet data from File B
+   * @returns {Array<Object>} Array of row change objects
+   * 
+   * Each change object:
+   * {
+   *   rowKey: string,        // Value from column A (row identifier)
+   *   type: string,          // 'added' or 'deleted'
+   *   oldRowIndex: number,   // Original row number (for deleted rows)
+   *   newRowIndex: number,   // New row number (for added rows)
+   *   row: Object            // Full row data
+   * }
+   * 
+   * Logic:
+   * - Skips first row (header row)
+   * - Uses column A value as unique row identifier
+   * - If column A is empty, uses fallback key "old-{index}" or "new-{index}"
+   * - A row is "added" if its key exists in File B but not in File A
+   * - A row is "deleted" if its key exists in File A but not in File B
    */
   detectRowChanges(oldData, newData) {
     const changes = [];
 
     if (!oldData || !newData) return changes;
 
-    // 跳過第1行（header）
+    // Skip first row (header row)
     const oldRows = oldData.slice(1);
     const newRows = newData.slice(1);
 
     const oldRowMap = new Map();
     const newRowMap = new Map();
 
-    // 用 A 欄做 key
+    // Build row map for File A (using column A as key)
     oldRows.forEach((row, index) => {
       const key = String(row.A || '').trim() || `old-${index}`;
-      oldRowMap.set(key, { row, index: index + 2 });
+      oldRowMap.set(key, { row, index: index + 2 }); // +2 because: +1 for 1-based, +1 for header
     });
 
+    // Build row map for File B (using column A as key)
     newRows.forEach((row, index) => {
       const key = String(row.A || '').trim() || `new-${index}`;
-      newRowMap.set(key, { row, index: index + 2 });
+      newRowMap.set(key, { row, index: index + 2 }); // +2 because: +1 for 1-based, +1 for header
     });
 
-    // 找出新增的行
+    // Find added rows (exist in File B but not in File A)
     newRowMap.forEach((data, key) => {
       if (!oldRowMap.has(key)) {
         changes.push({
@@ -233,7 +317,7 @@ class DiffEngine {
       }
     });
 
-    // 找出刪除的行
+    // Find deleted rows (exist in File A but not in File B)
     oldRowMap.forEach((data, key) => {
       if (!newRowMap.has(key)) {
         changes.push({
@@ -249,84 +333,117 @@ class DiffEngine {
   }
 
   /**
-   * ✅ 比對儲存格內容
+   * compareCells(oldData, newData)
+   * Compares individual cell values for matching rows
+   * Uses header content mapping to handle column reordering
+   * 
+   * @param {Array<Object>} oldData - Sheet data from File A
+   * @param {Array<Object>} newData - Sheet data from File B
+   * @returns {Array<Object>} Array of cell difference objects
+   * 
+   * Each difference object:
+   * {
+   *   row: number,         // Row number
+   *   header: string,      // Header content (column identifier)
+   *   oldCol: string,      // Old column letter
+   *   newCol: string,      // New column letter
+   *   oldValue: any,       // Original cell value
+   *   newValue: any        // New cell value
+   * }
+   * 
+   * Logic:
+   * 1. Builds header content → column letter mapping for both files
+   * 2. Builds row key → row data mapping using column A
+   * 3. For matching rows (same row key):
+   *    - For each header in File A, find corresponding column in File B
+   *    - Compare cell values
+   *    - Record differences
+   * 
+   * This approach handles column reordering correctly:
+   * - If "Email Address" moves from column G to column H, cells are still matched correctly
    */
   compareCells(oldData, newData) {
-  const differences = [];
+    const differences = [];
 
-  if (!oldData || !newData) return differences;
+    if (!oldData || !newData) return differences;
 
-  // ✅ 建立 header mapping（header content → column letters）
-  const oldHeaders = oldData[0] || {};
-  const newHeaders = newData[0] || {};
-  
-  const headerToOldCol = new Map();  // "Email Address" → "G"
-  const headerToNewCol = new Map();  // "Email Address" → "H"
+    // Build header mapping (header content → column letters)
+    const oldHeaders = oldData[0] || {};
+    const newHeaders = newData[0] || {};
+    
+    const headerToOldCol = new Map();  // "Email Address" → "G"
+    const headerToNewCol = new Map();  // "Email Address" → "H"
 
-  Object.keys(oldHeaders).forEach(col => {
-    const content = String(oldHeaders[col] || '').trim();
-    if (content) {
-      headerToOldCol.set(content, col);
-    }
-  });
+    // Map header content to column letters in File A
+    Object.keys(oldHeaders).forEach(col => {
+      const content = String(oldHeaders[col] || '').trim();
+      if (content) {
+        headerToOldCol.set(content, col);
+      }
+    });
 
-  Object.keys(newHeaders).forEach(col => {
-    const content = String(newHeaders[col] || '').trim();
-    if (content) {
-      headerToNewCol.set(content, col);
-    }
-  });
+    // Map header content to column letters in File B
+    Object.keys(newHeaders).forEach(col => {
+      const content = String(newHeaders[col] || '').trim();
+      if (content) {
+        headerToNewCol.set(content, col);
+      }
+    });
 
-  // ✅ 建立 row mapping
-  const oldRows = oldData.slice(1);
-  const newRows = newData.slice(1);
+    // Build row mapping (skip header row)
+    const oldRows = oldData.slice(1);
+    const newRows = newData.slice(1);
 
-  const oldRowMap = new Map();
-  const newRowMap = new Map();
+    const oldRowMap = new Map();
+    const newRowMap = new Map();
 
-  oldRows.forEach((row, index) => {
-    const key = String(row.A || '').trim() || `old-${index}`;
-    oldRowMap.set(key, { row, index: index + 2 });
-  });
+    // Map row keys to row data for File A
+    oldRows.forEach((row, index) => {
+      const key = String(row.A || '').trim() || `old-${index}`;
+      oldRowMap.set(key, { row, index: index + 2 });
+    });
 
-  newRows.forEach((row, index) => {
-    const key = String(row.A || '').trim() || `new-${index}`;
-    newRowMap.set(key, { row, index: index + 2 });
-  });
+    // Map row keys to row data for File B
+    newRows.forEach((row, index) => {
+      const key = String(row.A || '').trim() || `new-${index}`;
+      newRowMap.set(key, { row, index: index + 2 });
+    });
 
-  // ✅ 比對相同 rowKey 的儲存格（用 header mapping）
-  oldRowMap.forEach((oldRowData, key) => {
-    if (newRowMap.has(key)) {
-      const newRowData = newRowMap.get(key);
-      const oldRow = oldRowData.row;
-      const newRow = newRowData.row;
+    // Compare cells for matching rows (using header content mapping)
+    oldRowMap.forEach((oldRowData, key) => {
+      if (newRowMap.has(key)) {
+        const newRowData = newRowMap.get(key);
+        const oldRow = oldRowData.row;
+        const newRow = newRowData.row;
 
-      // 🔥 用 header content 做 key，唔係 column letter
-      headerToOldCol.forEach((oldCol, headerContent) => {
-        const newCol = headerToNewCol.get(headerContent);
-        
-        if (newCol) {
-          // ✅ 同一個 header，比對對應嘅 column
-          const oldVal = oldRow[oldCol];
-          const newVal = newRow[newCol];
+        // For each header in File A, compare with corresponding column in File B
+        headerToOldCol.forEach((oldCol, headerContent) => {
+          const newCol = headerToNewCol.get(headerContent);
+          
+          if (newCol) {
+            // Same header exists in both files - compare values
+            const oldVal = oldRow[oldCol];
+            const newVal = newRow[newCol];
 
-          if (oldVal !== newVal) {
-            differences.push({
-              row: oldRowData.index,
-              header: headerContent,    // ✅ 用 header content 做 key
-              oldCol: oldCol,
-              newCol: newCol,
-              oldValue: oldVal,
-              newValue: newVal
-            });
+            // Record difference if values don't match
+            if (oldVal !== newVal) {
+              differences.push({
+                row: oldRowData.index,
+                header: headerContent,    // Use header content as identifier
+                oldCol: oldCol,
+                newCol: newCol,
+                oldValue: oldVal,
+                newValue: newVal
+              });
+            }
           }
-        }
-      });
-    }
-  });
+        });
+      }
+    });
 
-  return differences;
-}
+    return differences;
+  }
 }
 
+// Export for use in other modules
 export default DiffEngine;

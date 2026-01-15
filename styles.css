@@ -7,65 +7,65 @@
   --color-primary-light: #e6f2ff;
   --color-primary-shadow: rgba(102, 126, 234, 0.4);
   --color-primary-shadow-hover: rgba(102, 126, 234, 0.6);
-  
+
   /* Success/Added Colors */
   --color-success: #38a169;
   --color-success-light: #d4edda;
   --color-success-dark: #28a745;
   --color-success-text: #22543d;
-  
+
   /* Danger/Deleted Colors */
   --color-danger: #e53e3e;
   --color-danger-light: #f8d7da;
   --color-danger-dark: #dc3545;
   --color-danger-text: #742a2a;
-  
+
   /* Warning/Modified Colors */
   --color-warning: #d69e2e;
   --color-warning-light: #fff3cd;
-  
+
   /* Neutral/Gray Colors */
-  --color-gray-50: #f7fafc;
-  --color-gray-100: #edf2f7;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5e0;
-  --color-gray-400: #a0aec0;
-  --color-gray-500: #718096;
-  --color-gray-600: #4a5568;
-  --color-gray-700: #2d3748;
-  --color-gray-800: #1a202c;
-  
+  --color-gray-50: hsl(0, 0%, 98%);
+  --color-gray-100: hsl(210, 38%, 95%);
+  --color-gray-200: hsl(210, 14%, 89%);
+  --color-gray-300: hsl(210, 25%, 84%);
+  --color-gray-400: hsl(210, 20%, 69%);
+  --color-gray-500: hsl(210, 15%, 52%);
+  --color-gray-600: hsl(210, 17%, 35%);
+  --color-gray-700: hsl(210, 23%, 23%);
+  --color-gray-800: hsl(210, 26%, 14%);
+
   /* Background Colors */
   --bg-white: #ffffff;
   --bg-light: #f8f9fa;
   --bg-hover: #f7fafc;
-  
+
   /* Text Colors */
   --text-primary: #333333;
   --text-secondary: #495057;
-  
+
   /* Border Colors */
   --border-light: #ddd;
   --border-medium: #cbd5e0;
-  
+
   /* Spacing */
   --spacing-xs: 8px;
   --spacing-sm: 12px;
   --spacing-md: 16px;
   --spacing-lg: 20px;
   --spacing-xl: 40px;
-  
+
   /* Border Radius */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
   --radius-full: 50%;
-  
+
   /* Transitions */
   --transition-fast: 0.2s ease;
   --transition-base: 0.3s ease;
-  
+
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
   --shadow-md: 0 4px 15px rgba(102, 126, 234, 0.4);
@@ -86,7 +86,6 @@ body {
   display: flex;
   flex-direction: column;
   background: #f9fafa;
-  padding: var(--spacing-lg);
   min-height: 100dvh;
   max-height: 100dvh;
   color: var(--text-primary);
@@ -100,9 +99,9 @@ body {
   color: var(--bg-white);
   text-align: center;
   background: linear-gradient(-90deg, #50a74d, #165932);
-padding: 30px;
-color: white;
-text-align: center;
+  padding: 30px;
+  color: white;
+  text-align: center;
 }
 
 .header h1 {
@@ -123,7 +122,7 @@ text-align: center;
 .container {
   display: flex;
   flex-direction: column;
-  margin: 0 auto auto;
+  margin: 20px auto auto;
   box-shadow: var(--shadow-xl);
   border-radius: var(--radius-xl);
   background: var(--bg-white);
@@ -142,21 +141,27 @@ text-align: center;
 }
 
 .upload-area {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  width: 100%;
   align-items: center;
+  justify-content: center;
   gap: 30px;
   margin-bottom: 30px;
 }
 
 .upload-box {
-  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+  flex-direction: column;
   transition: all var(--transition-base);
   cursor: pointer;
-  border: 3px dashed var(--border-medium);
+  border: 3px dashed var(--border-light);
   border-radius: var(--radius-xl);
   background: var(--color-gray-50);
   padding: var(--spacing-xl) var(--spacing-lg);
+  max-width: 400px;
   text-align: center;
 }
 
@@ -177,25 +182,30 @@ text-align: center;
 }
 
 .upload-icon {
-  margin-bottom: 15px;
+  /* margin-bottom: 15px; */
   font-size: 3em;
 }
 
 .upload-title {
-  margin-bottom: var(--spacing-xs);
+  /* margin-bottom: var(--spacing-xs); */
   color: var(--color-gray-700);
-  font-weight: 600;
-  font-size: 1.1em;
+  font-weight: bold;
+  font-size: 1.17em;
 }
 
 .upload-hint {
-  color: var(--color-gray-500);
-  font-size: 0.9em;
+  cursor: pointer;
+  border-radius: 6px;
+  background: var(--color-primary);
+  padding: 12px 30px;
+  width: fit-content;
+  color: white;
+  font-size: 1em;
 }
 
 .vs-divider {
   padding: 0 10px;
-  color: var(--color-gray-400);
+  color: var(--color-primary);
   font-weight: bold;
   font-size: 1.5em;
   text-align: center;
@@ -207,7 +217,7 @@ text-align: center;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  margin-top: 15px;
+  /* margin-top: 15px; */
   border-radius: var(--radius-lg);
 }
 
@@ -249,7 +259,7 @@ text-align: center;
   border: none;
   border-radius: var(--radius-lg);
   background: var(--color-primary);
-  padding: var(--spacing-md);
+  padding: 15px 50px;
   color: var(--bg-white);
   font-weight: 600;
   font-size: 1.1em;
@@ -264,6 +274,7 @@ text-align: center;
   cursor: not-allowed;
   box-shadow: none;
   background: var(--border-medium);
+  background: #ccc;
 }
 
 /* ===========================
@@ -330,20 +341,23 @@ text-align: center;
 /* ===========================
    Diff Section Controls
    =========================== */
+
 .back-btn {
   transition: all var(--transition-base);
   cursor: pointer;
-  border: 2px solid var(--border-medium);
+  border: none;
   border-radius: var(--radius-lg);
-  background: var(--color-gray-100);
-  padding: 10px var(--spacing-lg);
-  color: var(--color-gray-600);
+  background: var(--color-primary);
+  padding: 10px 24px;
+  color: var(--bg-white);
   font-weight: 600;
+  font-size: 1em;
+  white-space: nowrap;
 }
 
 .back-btn:hover {
-  border-color: var(--color-gray-400);
-  background: var(--color-gray-200);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .sheet-selection-row {
@@ -357,14 +371,16 @@ text-align: center;
 
 .sheet-selection-row label {
   display: flex;
+  flex-direction: row;
+  align-items: center;
   flex: 1;
-  flex-direction: column;
   gap: var(--spacing-xs);
   color: var(--color-gray-700);
   font-weight: 500;
 }
 
 .sheet-select {
+  flex: 1;
   cursor: pointer;
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
@@ -427,15 +443,15 @@ text-align: center;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all var(--transition-base);
+  transition: all 0.3s ease;
   cursor: pointer;
-  border: 2px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  background: var(--bg-white);
-  padding: var(--spacing-xs) var(--spacing-md);
-  color: var(--color-gray-600);
-  font-weight: 500;
-  font-size: 14px;
+  border: 2px solid var(--color-primary);
+  border-radius: 6px;
+  background: white;
+  padding: 8px 16px;
+  color: #0f7c41;
+  font-weight: bold;
+  font-size: 0.75em;
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -654,6 +670,11 @@ text-align: center;
   font-weight: bold;
 }
 
+.empty-cell{
+  font-style: italic;
+  color: var(--color-gray-400);
+}
+
 /* ===========================
    Cell Highlight (Keyboard Navigation)
    =========================== */
@@ -723,7 +744,7 @@ text-align: center;
    Footer
    =========================== */
 footer {
-   padding: 12px 0px;
+  padding: 12px 0px;
   color: #333;
   font-size: 12px;
   text-align: center;
@@ -739,7 +760,6 @@ footer a {
    =========================== */
 @media (max-width: 768px) {
   .upload-area {
-    grid-template-columns: 1fr;
     gap: var(--spacing-lg);
   }
 

@@ -1,168 +1,172 @@
-// main.js - Main application flow controller (Safari compatible)
+// main.js
 
-const App = {
-  /**
-   * Initialize the application
-   * Sets up file handlers and event bindings
-   */
-  init() {
-    console.log('📊 Excel Differ initializing...');
+import FileHandler from './fileHandler.js';
+import ExcelParser from './excelParser.js';
+import DiffEngine from './diffEngine.js';
+import DiffViewer from './diffViewer.js';
+import Copyright from './copyright.js';
 
-    // Check if SheetJS library is loaded
-    if (typeof XLSX === 'undefined') {
-      alert('Error: SheetJS library not loaded!');
-      return;
+class ExcelDiffer {
+    constructor() {
+        this.fileHandler = new FileHandler();
+        this.excelParser = new ExcelParser();
+        this.diffEngine = new DiffEngine();
+        this.diffViewer = new DiffViewer();
+        this.copyright = new Copyright();
+
+        this.fileA = null;
+        this.fileB = null;
+        this.dataA = null;
+        this.dataB = null;
+        this.diffResults = null;
     }
 
-    // Initialize file handler
-    FileHandler.init();
-
-    // Bind events
-    this.bindEvents();
-
-    console.log('✅ Initialization complete');
-  },
-
-  /**
-   * Bind event listeners to UI elements
-   */
-  bindEvents() {
-    // Compare button
-    document.getElementById('compareBtn').addEventListener('click', () => {
-      this.startComparison();
-    });
-
-    // Back to upload button
-    document.getElementById('backBtn').addEventListener('click', () => {
-      this.backToUpload();
-    });
-
-    // Back to summary button
-    document.getElementById('backToSummaryBtn').addEventListener('click', () => {
-      this.backToSummary();
-    });
-  },
-
-  /**
-   * Wait for browser to complete rendering
-   * This fixes Safari rendering issues by ensuring UI updates are complete
-   * @returns {Promise<void>} Resolves when rendering is complete
-   */
-  waitForRender() {
-    return new Promise((resolve) => {
-      // Use setTimeout to ensure UI update is complete
-      setTimeout(() => {
-        // Use requestAnimationFrame to ensure next frame is rendered
-        requestAnimationFrame(() => {
-          resolve();
-        });
-      }, 0);
-    });
-  },
-
-  /**
-   * Start the file comparison process
-   * Reads files, parses Excel data, performs diff, and displays results
-   */
-  async startComparison() {
-    try {
-      // Show loading overlay
-      this.showLoading(true);
-
-      // Wait for loading overlay to render (Safari fix)
-      await this.waitForRender();
-
-      // Read files
-      console.log('📖 Reading files...');
-      const fileDataA = await FileHandler.getFileData('A');
-      const fileDataB = await FileHandler.getFileData('B');
-
-      // Wait again to ensure UI is stable
-      await this.waitForRender();
-
-      // Parse Excel files
-      console.log('🔍 Parsing Excel...');
-      const parsedA = ExcelParser.parse(fileDataA.arrayBuffer, fileDataA.file.name);
-      const parsedB = ExcelParser.parse(fileDataB.arrayBuffer, fileDataB.file.name);
-
-      console.log('File A:', parsedA);
-      console.log('File B:', parsedB);
-
-      // Wait for UI update after parsing
-      await this.waitForRender();
-
-      // Perform diff comparison
-      console.log('⚡ Performing diff comparison...');
-      const diffResult = DiffEngine.compare(parsedA, parsedB);
-
-      console.log('Diff result:', diffResult);
-
-      // Hide loading overlay
-      this.showLoading(false);
-
-      // Wait for loading overlay to hide
-      await this.waitForRender();
-
-      // Display summary view
-      SummaryView.show(diffResult, parsedA, parsedB);
-    } catch (error) {
-      this.showLoading(false);
-      console.error('Error during comparison:', error);
-      alert(`Error: ${error.message}`);
+    init() {
+        this.fileHandler.init(this.handleFileUpload.bind(this));
+        this.copyright.init();
+        this.setupEventListeners();
     }
-  },
 
-  /**
-   * Return to the file upload page
-   * Hides summary and diff views, resets file selection
-   */
-  backToUpload() {
-    // Hide summary
-    SummaryView.hide();
+    setupEventListeners() {
+        const compareBtn = document.getElementById('compareBtn');
+        const backBtn = document.getElementById('backBtn');
+        const compareSheetBtn = document.getElementById('compareSheetBtn');
+        const prevBtn = document.getElementById('prevChangeBtn');
+        const nextBtn = document.getElementById('nextChangeBtn');
 
-    // Hide diff viewer
-    DiffViewer.hide();
+        if (compareBtn) {
+            compareBtn.addEventListener('click', () => this.compareFiles());
+        }
 
-    // Show upload section
-    document.getElementById('uploadSection').style.display = 'block';
-    
-    // Show Header
-    document.querySelector('.header').style.display = 'block';
+        if (backBtn) {
+            backBtn.addEventListener('click', () => this.reset());
+        }
 
-    // Reset files
-    FileHandler.reset();
-  },
+        if (compareSheetBtn) {
+            compareSheetBtn.addEventListener('click', () => this.handleCompareSheets());
+        }
 
-  /**
-   * Return to the summary page from diff view
-   */
-  backToSummary() {
-    // Hide diff viewer
-    DiffViewer.hide();
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                if (this.diffViewer) {
+                    this.diffViewer.navigateToChange(-1);
+                }
+            });
+        }
 
-    // Show summary section
-    document.getElementById('summarySection').style.display = 'block';
-  },
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (this.diffViewer) {
+                    this.diffViewer.navigateToChange(1);
+                }
+            });
+        }
+    }
 
-  /**
-   * Show or hide the loading overlay
-   * @param {boolean} show - True to show, false to hide
-   */
-  showLoading(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = show ? 'flex' : 'none';
-  },
-};
+    handleFileUpload(file, type) {
+        if (type === 'A') {
+            this.fileA = file;
+        } else if (type === 'B') {
+            this.fileB = file;
+        }
 
-// Initialize app when DOM is fully loaded
+        const compareBtn = document.getElementById('compareBtn');
+        if (this.fileA && this.fileB && compareBtn) {
+            compareBtn.disabled = false;
+        }
+    }
+
+    async compareFiles() {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        try {
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            console.log('File A:', this.fileA);
+            console.log('File B:', this.fileB);
+
+            if (!this.fileA || !this.fileB) {
+                throw new Error('Please select both files');
+            }
+
+            if (!(this.fileA instanceof File)) {
+                throw new Error('File A is not a valid File object');
+            }
+
+            if (!(this.fileB instanceof File)) {
+                throw new Error('File B is not a valid File object');
+            }
+
+            console.log('Parsing File A...');
+            this.dataA = await this.excelParser.parse(this.fileA);
+            console.log('File A parsed:', this.dataA);
+
+            console.log('Parsing File B...');
+            this.dataB = await this.excelParser.parse(this.fileB);
+            console.log('File B parsed:', this.dataB);
+
+            console.log('Comparing files...');
+            this.diffResults = this.diffEngine.compare(this.dataA, this.dataB);
+            console.log('Diff results:', this.diffResults);
+
+            // 直接進入 Diff View
+            this.diffViewer.init(this.dataA, this.dataB, this.diffResults);
+
+            this.hideUploadSection();
+            this.showDiffSection();
+        } catch (error) {
+            console.error('Error comparing files:', error);
+            alert('Error comparing files: ' + error.message);
+        } finally {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+        }
+    }
+
+    handleCompareSheets() {
+        if (this.diffViewer) {
+            this.diffViewer.compareSelectedSheets();
+        }
+    }
+
+    reset() {
+        this.fileA = null;
+        this.fileB = null;
+        this.dataA = null;
+        this.dataB = null;
+        this.diffResults = null;
+
+        this.fileHandler.reset();
+        this.hideDiffSection();
+        this.showUploadSection();
+
+        const compareBtn = document.getElementById('compareBtn');
+        if (compareBtn) compareBtn.disabled = true;
+    }
+
+    hideUploadSection() {
+        const uploadSection = document.getElementById('uploadSection');
+        if (uploadSection) uploadSection.style.display = 'none';
+    }
+
+    showUploadSection() {
+        const uploadSection = document.getElementById('uploadSection');
+        if (uploadSection) uploadSection.style.display = 'block';
+    }
+
+    hideDiffSection() {
+        const diffSection = document.getElementById('diffSection');
+        if (diffSection) diffSection.style.display = 'none';
+    }
+
+    showDiffSection() {
+        const diffSection = document.getElementById('diffSection');
+        if (diffSection) diffSection.style.display = 'block';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  App.init();
-});
+    const app = new ExcelDiffer();
+    app.init();
 
-// Prevent accidental page close when files are loaded
-window.addEventListener('beforeunload', (e) => {
-  if (FileHandler.fileA || FileHandler.fileB) {
-    e.preventDefault();
-    e.returnValue = 'Are you sure you want to leave? Unsaved comparison results will be lost.';
-  }
+    window.excelDiffer = app;
 });

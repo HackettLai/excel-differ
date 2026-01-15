@@ -1,320 +1,476 @@
-// diffEngine.js - Diff algorithm core engine (FIXED)
+// diffEngine.js
 
-const DiffEngine = {
+class DiffEngine {
+  constructor() {
+    this.keyColumns = null;
+  }
+
   /**
-   * Main comparison function
-   * Compares two parsed Excel files and returns detailed diff results
-   * @param {Object} parsedFileA - Parsed file A data
-   * @param {Object} parsedFileB - Parsed file B data
-   * @returns {Object} Comprehensive diff result with sheet changes and cell diffs
+   * Compare two workbooks
    */
-  compare(parsedFileA, parsedFileB) {
+  compare(workbookA, workbookB) {
+    console.log('Starting workbook comparison');
+
     const result = {
-      fileA: parsedFileA.fileName,
-      fileB: parsedFileB.fileName,
-      sheetChanges: this.compareSheets(parsedFileA.sheets, parsedFileB.sheets),
-      cellDiffs: {},
-      statistics: {
+      sheets: {},
+      summary: {
         totalSheets: 0,
+        modifiedSheets: 0,
         addedSheets: 0,
         removedSheets: 0,
-        modifiedSheets: 0,
-        unchangedSheets: 0,
       },
     };
 
-    // Compare the contents of each common sheet
-    result.sheetChanges.common.forEach((sheetName) => {
-      const sheetA = parsedFileA.sheets.find((s) => s.name === sheetName);
-      const sheetB = parsedFileB.sheets.find((s) => s.name === sheetName);
+    const allSheetNames = new Set([
+      ...workbookA.sheetNames,
+      ...workbookB.sheetNames,
+    ]);
 
-      const cellDiff = this.compareCells(sheetA, sheetB);
-      result.cellDiffs[sheetName] = cellDiff;
-    });
+    allSheetNames.forEach((sheetName) => {
+      const sheetA = workbookA.sheets[sheetName];
+      const sheetB = workbookB.sheets[sheetName];
 
-    // Also compare contents for renamed sheets!
-    result.sheetChanges.renamed.forEach((rename) => {
-      const sheetA = parsedFileA.sheets.find((s) => s.name === rename.from);
-      const sheetB = parsedFileB.sheets.find((s) => s.name === rename.to);
-
-      const cellDiff = this.compareCells(sheetA, sheetB);
-      result.cellDiffs[rename.to] = cellDiff; // Use new name as key
-    });
-
-    // Calculate statistics
-    result.statistics.totalSheets = parsedFileA.sheets.length + result.sheetChanges.added.length;
-    result.statistics.addedSheets = result.sheetChanges.added.length;
-    result.statistics.removedSheets = result.sheetChanges.removed.length;
-    result.statistics.renamedSheets = result.sheetChanges.renamed.length;
-
-    // Calculate modified and unchanged sheet counts
-    result.sheetChanges.common.forEach((sheetName) => {
-      const diff = result.cellDiffs[sheetName];
-      if (diff.changes.length > 0) {
-        result.statistics.modifiedSheets++;
+      if (!sheetA) {
+        result.sheets[sheetName] = {
+          status: 'added',
+          rowDiff: [],
+        };
+        result.summary.addedSheets++;
+      } else if (!sheetB) {
+        result.sheets[sheetName] = {
+          status: 'removed',
+          rowDiff: [],
+        };
+        result.summary.removedSheets++;
       } else {
-        result.statistics.unchangedSheets++;
+        result.sheets[sheetName] = this.compareSheets(sheetA, sheetB);
+        if (result.sheets[sheetName].hasChanges) {
+          result.summary.modifiedSheets++;
+        }
       }
+
+      result.summary.totalSheets++;
     });
 
+    console.log('Comparison summary:', result.summary);
     return result;
-  },
+  }
 
   /**
-   * Compare sheet-level changes between two files
-   * Identifies added, removed, common, and renamed sheets
-   * @param {Array} sheetsA - Sheets from file A
-   * @param {Array} sheetsB - Sheets from file B
-   * @returns {Object} Sheet comparison result
+   * Compare two sheets with intelligent row matching
    */
-  compareSheets(sheetsA, sheetsB) {
-    const namesA = sheetsA.map((s) => s.name);
-    const namesB = sheetsB.map((s) => s.name);
+  compareSheets(sheetA, sheetB) {
+    console.log('Comparing sheets with intelligent matching');
 
-    const setA = new Set(namesA);
-    const setB = new Set(namesB);
+  // ✨ 轉換為陣列
+  const rowsA = this.normalizeSheet(sheetA);
+  const rowsB = this.normalizeSheet(sheetB);
 
-    const added = namesB.filter((name) => !setA.has(name));
-    const removed = namesA.filter((name) => !setB.has(name));
-    const common = namesA.filter((name) => setB.has(name));
+  // ✅ Debug: 檢查資料結構
+  console.log('📊 Sheet A structure:', {
+    totalRows: rowsA.length,
+    firstRow: rowsA[0],
+    firstRowKeys: rowsA[0] ? Object.keys(rowsA[0]) : [],
+    secondRow: rowsA[1]
+  });
 
-    // Detect possible renames
-    const renamed = this.detectRenames(removed, added, sheetsA, sheetsB);
+  console.log('📊 Sheet B structure:', {
+    totalRows: rowsB.length,
+    firstRow: rowsB[0],
+    firstRowKeys: rowsB[0] ? Object.keys(rowsB[0]) : [],
+    secondRow: rowsB[1]
+  });
 
-    // Remove identified renamed sheets from added and removed lists
-    const renamedOldNames = renamed.map((r) => r.from);
-    const renamedNewNames = renamed.map((r) => r.to);
+  console.log('Rows A:', rowsA.length, 'Rows B:', rowsB.length);
 
-    const finalAdded = added.filter((name) => !renamedNewNames.includes(name));
-    const finalRemoved = removed.filter((name) => !renamedOldNames.includes(name));
+  // Find best key columns
+  this.keyColumns = this.findBestKeyColumns(rowsA, rowsB);
+  console.log('Selected key columns:', this.keyColumns);
+
+    // Detect column changes
+    const columnDiff = this.compareColumns(rowsA, rowsB);
+
+    // ✨ 使用新的智能匹配算法
+    const rowDiff = this.intelligentMatchRows(rowsA, rowsB);
+
+    const hasChanges = rowDiff.some((row) => row.type !== 'unchanged');
 
     return {
-      added: finalAdded,
-      removed: finalRemoved,
-      common: common,
-      renamed: renamed,
+      rowDiff,
+      columnDiff,
+      hasChanges,
+      keyColumns: this.keyColumns,
     };
-  },
+  }
 
   /**
-   * Detect sheet renaming by comparing content similarity
-   * Uses similarity threshold to identify likely renames
-   * @param {Array} removedNames - Sheet names removed from file A
-   * @param {Array} addedNames - Sheet names added in file B
-   * @param {Array} sheetsA - Sheets from file A
-   * @param {Array} sheetsB - Sheets from file B
-   * @returns {Array} Array of rename objects with from/to/confidence
+   * ✨ 智能匹配算法：結合 index 和 key
    */
-  detectRenames(removedNames, addedNames, sheetsA, sheetsB) {
-    const renames = [];
-    const threshold = 0.8; //  Lowered from 0.85 to 0.80
+  intelligentMatchRows(rowsA, rowsB) {
+    const result = [];
+    const maxLen = Math.max(rowsA.length, rowsB.length);
 
-    removedNames.forEach((oldName) => {
-      const oldSheet = sheetsA.find((s) => s.name === oldName);
+    // 如果有好的 key columns，建立 key map
+    let useKeyMatching = false;
+    let keyMapA = new Map();
+    let keyMapB = new Map();
 
-      addedNames.forEach((newName) => {
-        const newSheet = sheetsB.find((s) => s.name === newName);
+    if (this.keyColumns && this.keyColumns.length > 0) {
+      // 檢查 key 的唯一性
+      const keysA = rowsA.map((row, idx) => ({
+        key: this.getRowKey(row, this.keyColumns),
+        index: idx,
+        row
+      }));
+      
+      const keysB = rowsB.map((row, idx) => ({
+        key: this.getRowKey(row, this.keyColumns),
+        index: idx,
+        row
+      }));
 
-        const similarity = this.calculateSheetSimilarity(oldSheet, newSheet);
+      const uniqueKeysA = new Set(keysA.map(k => k.key));
+      const uniqueKeysB = new Set(keysB.map(k => k.key));
 
-        console.log(`🔍 Comparing "${oldName}" vs "${newName}": ${(similarity * 100).toFixed(2)}%`);
+      // 如果唯一性 > 90%，使用 key matching
+      const uniquenessA = uniqueKeysA.size / keysA.length;
+      const uniquenessB = uniqueKeysB.size / keysB.length;
 
-        if (similarity >= threshold) {
-          renames.push({
-            from: oldName,
-            to: newName,
-            confidence: similarity,
-          });
+      if (uniquenessA > 0.9 && uniquenessB > 0.9) {
+        useKeyMatching = true;
+        console.log('Using key-based matching');
+
+        keysA.forEach(item => {
+          if (!keyMapA.has(item.key)) {
+            keyMapA.set(item.key, []);
+          }
+          keyMapA.get(item.key).push(item);
+        });
+
+        keysB.forEach(item => {
+          if (!keyMapB.has(item.key)) {
+            keyMapB.set(item.key, []);
+          }
+          keyMapB.get(item.key).push(item);
+        });
+      }
+    }
+
+    if (useKeyMatching) {
+      // ✨ Key-based matching
+      const allKeys = new Set([...keyMapA.keys(), ...keyMapB.keys()]);
+      const processedA = new Set();
+      const processedB = new Set();
+
+      allKeys.forEach(key => {
+        const itemsA = keyMapA.get(key) || [];
+        const itemsB = keyMapB.get(key) || [];
+
+        const maxItems = Math.max(itemsA.length, itemsB.length);
+
+        for (let i = 0; i < maxItems; i++) {
+          const itemA = itemsA[i];
+          const itemB = itemsB[i];
+
+          if (itemA && itemB) {
+            // Both exist - compare
+            const cellDiff = this.compareCells(itemA.row, itemB.row);
+            const hasChanges = Object.values(cellDiff).some(cell => cell.changed);
+
+            result.push({
+              type: hasChanges ? 'modified' : 'unchanged',
+              oldIndex: itemA.index + 1,
+              newIndex: itemB.index + 1,
+              cells: cellDiff,
+              key: key,
+            });
+
+            processedA.add(itemA.index);
+            processedB.add(itemB.index);
+
+          } else if (itemA) {
+            // Removed
+            result.push({
+              type: 'removed',
+              oldIndex: itemA.index + 1,
+              newIndex: null,
+              cells: this.createCellsFromRow(itemA.row, 'removed'),
+              key: key,
+            });
+            processedA.add(itemA.index);
+
+          } else if (itemB) {
+            // Added
+            result.push({
+              type: 'added',
+              oldIndex: null,
+              newIndex: itemB.index + 1,
+              cells: this.createCellsFromRow(itemB.row, 'added'),
+              key: key,
+            });
+            processedB.add(itemB.index);
+          }
         }
       });
-    });
 
-    // Only keep the highest similarity match for each sheet
-    const finalRenames = [];
-    const usedOld = new Set();
-    const usedNew = new Set();
-
-    // Sort by similarity (highest first)
-    renames.sort((a, b) => b.confidence - a.confidence);
-
-    renames.forEach((rename) => {
-      if (!usedOld.has(rename.from) && !usedNew.has(rename.to)) {
-        finalRenames.push(rename);
-        usedOld.add(rename.from);
-        usedNew.add(rename.to);
-      }
-    });
-
-    return finalRenames;
-  },
-
-  /**
-   * Calculate similarity between two sheets based on content
-   * Compares dimensions and cell values in first 10 rows
-   * @param {Object} sheetA - Sheet from file A
-   * @param {Object} sheetB - Sheet from file B
-   * @returns {number} Similarity score between 0 and 1
-   */
-  calculateSheetSimilarity(sheetA, sheetB) {
-    // If dimension differences are too large, similarity is 0
-    const rowDiff = Math.abs(sheetA.rowCount - sheetB.rowCount);
-    const colDiff = Math.abs(sheetA.colCount - sheetB.colCount);
-
-    if (rowDiff > 10 || colDiff > 5) {
-      return 0;
-    }
-
-    // Compare first 10 rows or actual row count (whichever is smaller)
-    const maxRow = Math.min(10, sheetA.data.length, sheetB.data.length);
-    let matches = 0;
-    let total = 0;
-
-    for (let r = 0; r < maxRow; r++) {
-      const rowA = sheetA.data[r] || [];
-      const rowB = sheetB.data[r] || [];
-      const maxCol = Math.max(rowA.length, rowB.length);
-
-      for (let c = 0; c < maxCol; c++) {
-        total++;
-        const valA = rowA[c];
-        const valB = rowB[c];
-
-        if (ExcelParser.areValuesEqual(valA, valB)) {
-          matches++;
+      // Sort by index
+      result.sort((a, b) => {
+        if (a.oldIndex !== null && b.oldIndex !== null) {
+          return a.oldIndex - b.oldIndex;
         }
-      }
-    }
+        if (a.newIndex !== null && b.newIndex !== null) {
+          return a.newIndex - b.newIndex;
+        }
+        return 0;
+      });
 
-    return total > 0 ? matches / total : 0;
-  },
+    } else {
+      // ✨ Index-based matching (fallback)
+      console.log('Using index-based matching');
 
-  /**
-   * Compare cell-level content between two sheets
-   * Identifies added, removed, and modified cells
-   * @param {Object} sheetA - Sheet from file A
-   * @param {Object} sheetB - Sheet from file B
-   * @returns {Object} Cell diff result with changes and statistics
-   */
-  compareCells(sheetA, sheetB) {
-    const changes = [];
+      for (let i = 0; i < maxLen; i++) {
+        const rowA = rowsA[i];
+        const rowB = rowsB[i];
 
-    // Normalize data for easier comparison
-    const dataA = ExcelParser.normalizeData(sheetA.data);
-    const dataB = ExcelParser.normalizeData(sheetB.data);
+        if (rowA && rowB) {
+          // Both rows exist - compare
+          const cellDiff = this.compareCells(rowA, rowB);
+          const hasChanges = Object.values(cellDiff).some(cell => cell.changed);
 
-    const maxRow = Math.max(dataA.length, dataB.length);
-    const maxCol = Math.max(dataA.length > 0 ? dataA[0].length : 0, dataB.length > 0 ? dataB[0].length : 0);
+          result.push({
+            type: hasChanges ? 'modified' : 'unchanged',
+            oldIndex: i + 1,
+            newIndex: i + 1,
+            cells: cellDiff,
+          });
 
-    // Cell-by-cell comparison
-    for (let r = 0; r < maxRow; r++) {
-      const rowA = dataA[r] || [];
-      const rowB = dataB[r] || [];
+        } else if (rowA && !rowB) {
+          // Row removed
+          result.push({
+            type: 'removed',
+            oldIndex: i + 1,
+            newIndex: null,
+            cells: this.createCellsFromRow(rowA, 'removed'),
+          });
 
-      for (let c = 0; c < maxCol; c++) {
-        const valA = rowA[c];
-        const valB = rowB[c];
-
-        if (!ExcelParser.areValuesEqual(valA, valB)) {
-          const isEmpty_A = valA === null || valA === undefined || valA === '';
-          const isEmpty_B = valB === null || valB === undefined || valB === '';
-
-          let changeType;
-          if (isEmpty_A && !isEmpty_B) {
-            changeType = 'added';
-          } else if (!isEmpty_A && isEmpty_B) {
-            changeType = 'removed';
-          } else {
-            changeType = 'modified';
-          }
-
-          changes.push({
-            row: r,
-            col: c,
-            type: changeType,
-            oldValue: valA,
-            newValue: valB,
-            cellRef: this.getCellReference(r, c),
+        } else if (!rowA && rowB) {
+          // Row added
+          result.push({
+            type: 'added',
+            oldIndex: null,
+            newIndex: i + 1,
+            cells: this.createCellsFromRow(rowB, 'added'),
           });
         }
       }
     }
 
-    return {
-      changes: changes,
-      totalChanges: changes.length,
-      additions: changes.filter((c) => c.type === 'added').length,
-      deletions: changes.filter((c) => c.type === 'removed').length,
-      modifications: changes.filter((c) => c.type === 'modified').length,
-    };
-  },
+    return result;
+  }
 
   /**
-   * Get cell reference in Excel notation (e.g., A1, B2, AA10)
-   * @param {number} row - Zero-based row index
-   * @param {number} col - Zero-based column index
-   * @returns {string} Cell reference (e.g., 'A1')
+   * ✨ 生成行的 key
    */
-  getCellReference(row, col) {
-    return ExcelParser.getColumnName(col) + (row + 1);
-  },
+  getRowKey(row, keyColumns) {
+    if (!keyColumns || keyColumns.length === 0) {
+      return '';
+    }
+    return keyColumns.map(col => (row[col] ?? '')).join('|');
+  }
 
   /**
-   * Get the status of a sheet
-   * @param {string} sheetName - Name of the sheet
-   * @param {Object} sheetChanges - Sheet changes object
-   * @param {Object} cellDiffs - Cell diffs object
-   * @returns {string} Status: 'added', 'removed', 'renamed', 'modified', or 'unchanged'
+   * ✨ 將 sheet 轉換為標準陣列格式
    */
-  getSheetStatus(sheetName, sheetChanges, cellDiffs) {
-    if (sheetChanges.added.includes(sheetName)) {
-      return 'added';
-    }
-
-    if (sheetChanges.removed.includes(sheetName)) {
-      return 'removed';
-    }
-
-    const renamed = sheetChanges.renamed.find((r) => r.from === sheetName || r.to === sheetName);
-    if (renamed) {
-      return 'renamed';
-    }
-
-    if (cellDiffs[sheetName]) {
-      const diff = cellDiffs[sheetName];
-      if (diff.changes.length > 0) {
-        return 'modified';
-      }
-    }
-
-    return 'unchanged';
-  },
+/**
+ * ✅ 修正：正確處理 sheet 的資料結構
+ */
+normalizeSheet(sheet) {
+  if (!sheet) {
+    console.warn('normalizeSheet: sheet is null or undefined');
+    return [];
+  }
+  
+  // ✅ 如果傳入的是 sheet object (有 data 屬性)
+  if (sheet.data && Array.isArray(sheet.data)) {
+    console.log('✅ Found sheet.data array, length:', sheet.data.length);
+    return sheet.data.filter(row => row && typeof row === 'object');
+  }
+  
+  // 如果已經是陣列，直接返回
+  if (Array.isArray(sheet)) {
+    console.log('✅ Sheet is already an array, length:', sheet.length);
+    return sheet.filter(row => row && typeof row === 'object');
+  }
+  
+  // 如果是物件但沒有 data 屬性，嘗試轉換
+  if (typeof sheet === 'object') {
+    console.log('⚠️ Sheet is object without data property');
+    return Object.values(sheet).filter(row => row && typeof row === 'object');
+  }
+  
+  console.warn('❌ Unable to normalize sheet:', sheet);
+  return [];
+}
 
   /**
-   * Create a cell diff map for quick lookups
-   * Maps "row-col" keys to change objects
-   * @param {Array} changes - Array of cell changes
-   * @returns {Map} Map of cell coordinates to change objects
+   * Find best key columns for row matching
    */
-  createCellDiffMap(changes) {
-    const map = new Map();
+  findBestKeyColumns(rowsA, rowsB) {
+    if (rowsA.length === 0 || rowsB.length === 0) {
+      console.warn('Empty sheets provided');
+      return [];
+    }
 
-    changes.forEach((change) => {
-      const key = `${change.row}-${change.col}`;
-      map.set(key, change);
+    // Get all column names (from first row)
+    const firstRowA = rowsA[0];
+    const firstRowB = rowsB[0];
+
+    if (!firstRowA || !firstRowB) {
+      console.warn('No valid first row');
+      return [];
+    }
+
+    const columnsA = Object.keys(firstRowA);
+    const columnsB = Object.keys(firstRowB);
+    const commonColumns = columnsA.filter((col) => columnsB.includes(col));
+
+    if (commonColumns.length === 0) {
+      console.warn('No common columns found');
+      return [];
+    }
+
+    // Score each column based on uniqueness
+    const columnScores = commonColumns.map((col) => {
+      const uniquenessA = this.calculateUniqueness(rowsA, col);
+      const uniquenessB = this.calculateUniqueness(rowsB, col);
+      const avgUniqueness = (uniquenessA + uniquenessB) / 2;
+
+      return {
+        column: col,
+        score: avgUniqueness,
+      };
     });
 
-    return map;
-  },
+    // Sort by score (higher is better)
+    columnScores.sort((a, b) => b.score - a.score);
+
+    console.log('Column scores:', columnScores.slice(0, 5));
+
+    // If top column has high uniqueness (> 90%), use it alone
+    if (columnScores[0].score > 0.9) {
+      return [columnScores[0].column];
+    }
+
+    // Otherwise, try combination of top 2-3 columns
+    const topColumns = columnScores.slice(0, Math.min(3, columnScores.length)).map((c) => c.column);
+    const combinedUniqueness = this.calculateCombinedUniqueness(
+      rowsA,
+      rowsB,
+      topColumns
+    );
+
+    console.log('Combined uniqueness:', combinedUniqueness);
+
+    if (combinedUniqueness > 0.95) {
+      return topColumns;
+    }
+
+    // ✨ 如果沒有好的 key，返回空陣列（使用 index matching）
+    return [];
+  }
 
   /**
-   * Get diff information for a specific cell
-   * @param {number} row - Zero-based row index
-   * @param {number} col - Zero-based column index
-   * @param {Map} diffMap - Cell diff map
-   * @returns {Object|undefined} Change object if cell has changes, undefined otherwise
+   * Calculate uniqueness of a column (0-1, higher is better)
    */
-  getCellDiff(row, col, diffMap) {
-    const key = `${row}-${col}`;
-    return diffMap.get(key);
-  },
-};
+  calculateUniqueness(rows, column) {
+    const values = rows
+      .map((row) => row[column])
+      .filter((v) => v != null && v !== '');
+    
+    if (values.length === 0) return 0;
+    
+    const uniqueValues = new Set(values);
+    return uniqueValues.size / values.length;
+  }
+
+  /**
+   * Calculate combined uniqueness of multiple columns
+   */
+  calculateCombinedUniqueness(rowsA, rowsB, columns) {
+    const keysA = rowsA
+      .map((row) => columns.map((col) => row[col] ?? '').join('|'))
+      .filter(key => key.trim() !== '' && !key.split('|').every(v => v === ''));
+    
+    const keysB = rowsB
+      .map((row) => columns.map((col) => row[col] ?? '').join('|'))
+      .filter(key => key.trim() !== '' && !key.split('|').every(v => v === ''));
+
+    if (keysA.length === 0 || keysB.length === 0) return 0;
+
+    const uniqueA = new Set(keysA).size / keysA.length;
+    const uniqueB = new Set(keysB).size / keysB.length;
+
+    return (uniqueA + uniqueB) / 2;
+  }
+
+  /**
+   * Compare columns between two sheets
+   */
+  compareColumns(rowsA, rowsB) {
+    const firstRowA = rowsA.find(row => row && typeof row === 'object');
+    const firstRowB = rowsB.find(row => row && typeof row === 'object');
+
+    const columnsA = new Set(firstRowA ? Object.keys(firstRowA) : []);
+    const columnsB = new Set(firstRowB ? Object.keys(firstRowB) : []);
+
+    const added = Array.from(columnsB).filter((col) => !columnsA.has(col));
+    const removed = Array.from(columnsA).filter((col) => !columnsB.has(col));
+    const common = Array.from(columnsA).filter((col) => columnsB.has(col));
+
+    return { added, removed, common };
+  }
+
+  /**
+   * Compare cells in two rows
+   */
+  compareCells(rowA, rowB) {
+    const allKeys = new Set([...Object.keys(rowA), ...Object.keys(rowB)]);
+    const cells = {};
+
+    allKeys.forEach((key) => {
+      const valA = rowA[key];
+      const valB = rowB[key];
+
+      if (valA !== valB) {
+        cells[key] = {
+          changed: true,
+          oldValue: valA,
+          newValue: valB,
+        };
+      } else {
+        cells[key] = {
+          changed: false,
+          value: valA,
+        };
+      }
+    });
+
+    return cells;
+  }
+
+  /**
+   * Create cells object from a single row
+   */
+  createCellsFromRow(row, type) {
+    const cells = {};
+    Object.keys(row).forEach((key) => {
+      cells[key] = {
+        value: row[key],
+        changed: false,
+      };
+    });
+    return cells;
+  }
+}
+
+export default DiffEngine;

@@ -3,22 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Local Excel file comparison tool - runs completely in the browser, no data is uploaded" />
-    <meta name="keywords" content="Excel, Diff, Compare, Local, Browser, Privacy" />
-    <meta name="author" content="Hackett.Lai" />
+    <!-- favicons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#1f1f1f" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="theme-color" content="#ffffff" />
+
+    <!-- meta tags -->
+    <meta property="og:title" content="Excel Differ - Local Excel Comparison Tool" />
+    <meta name="title" property="og:title" content="Excel Differ - Local Excel Comparison Tool" />
+    <meta name="og:image" content="/assets/og_image.jpeg" />
+    <meta property="og:image" content="/assets/og_image.jpeg" />
+    <meta name="image" property="og:image" content="/assets/og_image.jpeg" />
+    <meta name="description" content="Compare Excel files locally in your browser. No data is uploaded to any server." />
+    <meta name="og:description" content="Compare Excel files locally in your browser. No data is uploaded to any server." />
+    <meta property="og:description" content="Compare Excel files locally in your browser. No data is uploaded to any server." />
+    <meta name="description" property="og:description" content="Compare Excel files locally in your browser. No data is uploaded to any server." />
+    <meta name="url" content="https://excel-differ.hackettlai.com" />
+    <meta name="og:url" content="https://excel-differ.hackettlai.com" />
+    <meta property="og:url" content="https://excel-differ.hackettlai.com" />
+    <meta name="keywords" content="excel differ, excel comparison, local excel tool, diff, differ, check differences, file comparison" />
+    <meta http-equiv="CACHE-CONTROL" content="NO-CACHE" />
+
     <title>Excel Differ - Local Excel Comparison Tool</title>
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
   <body>
-    <!-- Header -->
-    <div class="header">
-      <h1>📊 Excel Differ</h1>
-      <p class="subtitle">Local Excel file comparison tool - runs completely in the browser, no data is uploaded</p>
-    </div>
-
+    
     <!-- Main Container -->
     <div class="container">
+      <!-- Header -->
+      <div class="header" id="header">
+        <h1>📊 Excel Differ</h1>
+        <p class="subtitle">Local Excel file comparison tool - runs completely in the browser, no data is uploaded</p>
+      </div>
       <!-- Upload Section -->
       <div class="upload-section" id="uploadSection">
         <div class="upload-area">
@@ -50,19 +73,15 @@
           </div>
         </div>
 
-        <!-- Compare Button -->
-        <button class="compare-btn" id="compareBtn" disabled>Start Comparing</button>
+        <!-- Start Compare Button -->
+        <button class="start-compare-btn" id="startCompareBtn" disabled>Start Comparing</button>
       </div>
 
       <!-- Diff View Section -->
-      <div id="diffSection" class="section" style="display: none">
-        <div class="diff-header">
-          <button id="backBtn" class="back-btn">← Back to Upload</button>
-          <h2>Sheet Comparison</h2>
-        </div>
-
+      <div id="diffSection" class="diff-section" style="display: none">
         <!-- Sheet Selection Row -->
         <div class="sheet-selection-row">
+          <button id="backBtn" class="back-btn">← Back</button>
           <label>
             File A:
             <select id="sheetSelectA" class="sheet-select"></select>
@@ -73,14 +92,22 @@
             <select id="sheetSelectB" class="sheet-select"></select>
           </label>
 
-          <button id="compareSheetBtn" class="compare-btn-inline">Compare</button>
+          <button id="compareSheetBtn" class="compare-btn">Compare</button>
         </div>
-
-        <!-- Change Navigation -->
-        <div id="changeNavigation" class="change-navigation" style="display: none">
-          <button id="prevChangeBtn">← Previous</button>
-          <span id="changeCounter">0 / 0</span>
-          <button id="nextChangeBtn">Next →</button>
+        <div class="diff-controls">
+          <!-- Legend -->
+          <div class="legend-group">
+            <div class="legend-item"><span class="legend-color added"></span> Added</div>
+            <div class="legend-item"><span class="legend-color removed"></span> Removed</div>
+            <div class="legend-item"><span class="legend-color modified"></span> Modified</div>
+            <div class="legend-item"><span class="legend-color unchanged"></span> Unchanged</div>
+          </div>
+          <!-- Change Navigation -->
+          <div id="changeNavigation" class="change-navigation">
+            <button id="prevChangeBtn" class="nav-btn">← (P)revious</button>
+            <span id="changeCounter" class="change-counter">0 / 0</span>
+            <button id="nextChangeBtn" class="nav-btn">(N)ext →</button>
+          </div>
         </div>
 
         <!-- Diff Table Container -->
@@ -93,9 +120,6 @@
       <div class="spinner"></div>
       <p>Processing...</p>
     </div>
-
-    <!-- Custom Tooltip -->
-    <div class="custom-tooltip" id="customTooltip"></div>
 
     <!-- Footer -->
     <footer>

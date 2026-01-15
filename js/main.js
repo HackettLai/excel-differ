@@ -28,14 +28,14 @@ class ExcelDiffer {
     }
 
     setupEventListeners() {
-        const compareBtn = document.getElementById('compareBtn');
+        const startCompareBtn = document.getElementById('startCompareBtn');
         const backBtn = document.getElementById('backBtn');
         const compareSheetBtn = document.getElementById('compareSheetBtn');
         const prevBtn = document.getElementById('prevChangeBtn');
         const nextBtn = document.getElementById('nextChangeBtn');
 
-        if (compareBtn) {
-            compareBtn.addEventListener('click', () => this.compareFiles());
+        if (startCompareBtn) {
+            startCompareBtn.addEventListener('click', () => this.compareFiles());
         }
 
         if (backBtn) {
@@ -46,21 +46,6 @@ class ExcelDiffer {
             compareSheetBtn.addEventListener('click', () => this.handleCompareSheets());
         }
 
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                if (this.diffViewer) {
-                    this.diffViewer.navigateToChange(-1);
-                }
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                if (this.diffViewer) {
-                    this.diffViewer.navigateToChange(1);
-                }
-            });
-        }
     }
 
     handleFileUpload(file, type) {
@@ -70,9 +55,9 @@ class ExcelDiffer {
             this.fileB = file;
         }
 
-        const compareBtn = document.getElementById('compareBtn');
-        if (this.fileA && this.fileB && compareBtn) {
-            compareBtn.disabled = false;
+        const startCompareBtn = document.getElementById('startCompareBtn');
+        if (this.fileA && this.fileB && startCompareBtn) {
+            startCompareBtn.disabled = false;
         }
     }
 
@@ -139,18 +124,22 @@ class ExcelDiffer {
         this.hideDiffSection();
         this.showUploadSection();
 
-        const compareBtn = document.getElementById('compareBtn');
-        if (compareBtn) compareBtn.disabled = true;
+        const startCompareBtn = document.getElementById('startCompareBtn');
+        if (startCompareBtn) startCompareBtn.disabled = true;
     }
 
     hideUploadSection() {
         const uploadSection = document.getElementById('uploadSection');
         if (uploadSection) uploadSection.style.display = 'none';
+        const header = document.getElementById('header');
+        if (uploadSection) header.style.display = 'none';
     }
 
     showUploadSection() {
         const uploadSection = document.getElementById('uploadSection');
-        if (uploadSection) uploadSection.style.display = 'block';
+        if (uploadSection) uploadSection.style.display = 'flex';
+         const header = document.getElementById('header');
+        if (uploadSection) header.style.display = 'block';
     }
 
     hideDiffSection() {
@@ -160,7 +149,7 @@ class ExcelDiffer {
 
     showDiffSection() {
         const diffSection = document.getElementById('diffSection');
-        if (diffSection) diffSection.style.display = 'block';
+        if (diffSection) diffSection.style.display = 'flex';
     }
 }
 

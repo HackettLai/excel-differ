@@ -1,4 +1,7 @@
-// diffViewer.js
+/**
+ * diffViewer.js
+ * 顯示 Excel 比對結果 - UNIFIED TABLE with Old/New Index
+ */
 
 import DiffEngine from './diffEngine.js';
 
@@ -7,246 +10,422 @@ class DiffViewer {
     this.dataA = null;
     this.dataB = null;
     this.diffResults = null;
-    this.selectedSheetA = null;
-    this.selectedSheetB = null;
     this.changedCells = [];
     this.currentChangeIndex = -1;
-    this._allColumns = [];
-    this.diffEngine = new DiffEngine(); // ✨ 使用 DiffEngine 實例
   }
 
   /**
-   * Initialize diff viewer with data
-   * @param {Object} dataA - File A workbook data
-   * @param {Object} dataB - File B workbook data
-   * @param {Object} diffResults - Diff results from DiffEngine
+   * ✅ 初始化：填入 dropdown + 自動選中同名 sheet
    */
   init(dataA, dataB, diffResults) {
-    console.log('Initializing DiffViewer');
-
     this.dataA = dataA;
     this.dataB = dataB;
     this.diffResults = diffResults;
 
-    // Populate sheet dropdowns
     this.populateSheetDropdowns();
 
-    // Auto-select sheets (same name if exists, otherwise first sheet)
-    this.autoSelectSheets();
+    const matchedSheet = this.findMatchingSheet();
 
-    console.log('DiffViewer initialized');
+    if (matchedSheet) {
+      document.getElementById('sheetSelectA').value = matchedSheet.sheetA;
+      document.getElementById('sheetSelectB').value = matchedSheet.sheetB;
+      this.compareSelectedSheets();
+    } else {
+      console.log('⚠️ 冇同名 sheet，等用戶手動按 Compare');
+    }
+
+    this.setupChangeNavigation();
   }
 
   /**
-   * Populate sheet selection dropdowns
+   * ✅ 尋找同名 sheet
+   */
+  findMatchingSheet() {
+    if (!this.dataA.sheetNames || !this.dataB.sheetNames) return null;
+
+    for (let sheetA of this.dataA.sheetNames) {
+      if (this.dataB.sheetNames.includes(sheetA)) {
+        return { sheetA, sheetB: sheetA };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * ✅ 填入 sheet names 到兩個 dropdown
    */
   populateSheetDropdowns() {
-    const selectA = document.getElementById('sheetSelectA');
-    const selectB = document.getElementById('sheetSelectB');
+    const sheetSelectA = document.getElementById('sheetSelectA');
+    const sheetSelectB = document.getElementById('sheetSelectB');
 
-    if (!selectA || !selectB) {
-      console.error('Sheet select elements not found');
+    if (!sheetSelectA || !sheetSelectB) {
+      console.error('找不到 sheet dropdown');
       return;
     }
 
-    // Clear existing options
-    selectA.innerHTML = '';
-    selectB.innerHTML = '';
+    sheetSelectA.innerHTML = '';
+    sheetSelectB.innerHTML = '';
 
-    // Populate File A sheets
     if (this.dataA && this.dataA.sheetNames) {
       this.dataA.sheetNames.forEach((sheetName) => {
         const option = document.createElement('option');
         option.value = sheetName;
         option.textContent = sheetName;
-        selectA.appendChild(option);
+        sheetSelectA.appendChild(option);
       });
     }
 
-    // Populate File B sheets
     if (this.dataB && this.dataB.sheetNames) {
       this.dataB.sheetNames.forEach((sheetName) => {
         const option = document.createElement('option');
         option.value = sheetName;
         option.textContent = sheetName;
-        selectB.appendChild(option);
+        sheetSelectB.appendChild(option);
       });
     }
 
-    console.log('Sheet dropdowns populated');
+    console.log('✅ Sheet dropdowns 已填入');
   }
 
   /**
-   * Auto-select sheets based on matching names
-   */
-  autoSelectSheets() {
-    const selectA = document.getElementById('sheetSelectA');
-    const selectB = document.getElementById('sheetSelectB');
-
-    if (!selectA || !selectB) return;
-
-    // Get first sheet from each file
-    const firstSheetA = this.dataA?.sheetNames?.[0];
-    const firstSheetB = this.dataB?.sheetNames?.[0];
-
-    if (!firstSheetA || !firstSheetB) {
-      console.warn('No sheets found in files');
-      return;
-    }
-
-    // Check if there's a matching sheet name
-    let matchFound = false;
-
-    for (const sheetA of this.dataA.sheetNames) {
-      if (this.dataB.sheetNames.includes(sheetA)) {
-        // Found matching sheet name
-        selectA.value = sheetA;
-        selectB.value = sheetA;
-        this.selectedSheetA = sheetA;
-        this.selectedSheetB = sheetA;
-        matchFound = true;
-        console.log('Auto-selected matching sheets:', sheetA);
-
-        // Auto-compare
-        this.compareSelectedSheets();
-        break;
-      }
-    }
-
-    if (!matchFound) {
-      // No match, just select first sheet of each
-      selectA.value = firstSheetA;
-      selectB.value = firstSheetB;
-      this.selectedSheetA = firstSheetA;
-      this.selectedSheetB = firstSheetB;
-      console.log('No matching sheets, selected first sheets');
-
-      // Don't auto-compare if names don't match
-    }
-  }
-
-  /**
-   * Compare selected sheets (triggered by Compare button)
+   * ✅ 當用戶點擊 "Compare" 按鈕時，比對選定的 sheets
    */
   compareSelectedSheets() {
-    const selectA = document.getElementById('sheetSelectA');
-    const selectB = document.getElementById('sheetSelectB');
+    const sheetSelectA = document.getElementById('sheetSelectA');
+    const sheetSelectB = document.getElementById('sheetSelectB');
 
-    if (!selectA || !selectB) {
-      console.error('Sheet select elements not found');
+    if (!sheetSelectA || !sheetSelectB) {
+      console.error('找不到 sheet dropdown');
       return;
     }
 
-    this.selectedSheetA = selectA.value;
-    this.selectedSheetB = selectB.value;
+    const selectedSheetA = sheetSelectA.value;
+    const selectedSheetB = sheetSelectB.value;
 
-    console.log('Comparing sheets:', this.selectedSheetA, 'vs', this.selectedSheetB);
-
-    // Get sheet data
-    const sheetDataA = this.dataA.sheets[this.selectedSheetA];
-    const sheetDataB = this.dataB.sheets[this.selectedSheetB];
-
-    if (!sheetDataA || !sheetDataB) {
-      console.error('Sheet data not found');
-      this.showNoDataMessage();
+    if (!selectedSheetA || !selectedSheetB) {
+      alert('請選擇要比對的 Sheet');
       return;
     }
 
-    // ✨ Use DiffEngine's compareSheets method
-    const singleSheetDiff = this.diffEngine.compareSheets(sheetDataA, sheetDataB);
+    console.log(`比對 Sheet: ${selectedSheetA} vs ${selectedSheetB}`);
 
-    console.log('Single sheet diff result:', singleSheetDiff);
+    const sheetA = this.dataA.sheets[selectedSheetA]?.data || [];
+    const sheetB = this.dataB.sheets[selectedSheetB]?.data || [];
 
-    // Render the diff table
+    if (sheetA.length === 0 || sheetB.length === 0) {
+      alert('選定的 Sheet 為空');
+      return;
+    }
+
+    const diffEngine = new DiffEngine();
+    const singleSheetDiff = diffEngine.compareSheets(sheetA, sheetB);
+    singleSheetDiff.sheetName = `${selectedSheetA} vs ${selectedSheetB}`;
+
     this.renderUnifiedTable(singleSheetDiff);
   }
 
   /**
-   * Render unified diff table
+   * ✅ 渲染 Unified Table（有 Old/New Index）
    */
   renderUnifiedTable(sheetDiff) {
     const container = document.getElementById('unifiedTableContainer');
     if (!container) {
-      console.error('unifiedTableContainer not found');
+      console.error('找不到 unifiedTableContainer 容器');
       return;
     }
 
-    if (!sheetDiff || !sheetDiff.rowDiff) {
-      this.showNoDataMessage();
-      this.hideChangeNavigation();
-      return;
-    }
+    container.innerHTML = '';
 
-    // Cache all columns
-    this._allColumns = this.getAllColumns(sheetDiff.rowDiff);
-
-    // Create table
     const table = document.createElement('table');
     table.className = 'unified-table diff-table';
 
-    // Create header
-    const thead = this.createUnifiedHeader();
+    // ✅ 建立 header（兩層）
+    const thead = this.buildUnifiedHeader(sheetDiff);
     table.appendChild(thead);
 
-    // Create body
-    const tbody = this.createUnifiedBody(sheetDiff.rowDiff);
+    // ✅ 建立 body
+    const tbody = this.buildUnifiedBody(sheetDiff);
     table.appendChild(tbody);
 
-    container.innerHTML = '';
-    container.appendChild(table);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'table-wrapper';
+    wrapper.appendChild(table);
 
-    // Collect changed cells
+    container.appendChild(wrapper);
+
     this.collectChangedCells();
+
+    // ✅ 新增：綁定 cell click event
+    this.setupCellClickNavigation();
   }
 
   /**
-   * Show "no data" message
+   * ✅ 新增：綁定 cell click event，點擊後跳到最近嘅 change
    */
-  showNoDataMessage() {
-    const container = document.getElementById('unifiedTableContainer');
-    if (container) {
-      container.innerHTML = '<p style="padding: 20px; text-align: center; color: #718096;">No data available for comparison</p>';
-    }
+  setupCellClickNavigation() {
+    const table = document.querySelector('#unifiedTableContainer .diff-table');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    tbody.addEventListener('click', (e) => {
+      // 檢查係咪點擊咗 td
+      const clickedCell = e.target.closest('td');
+      if (!clickedCell) return;
+
+      // 檢查係咪 changed cell
+      const isChangedCell = clickedCell.classList.contains('cell-modified') || clickedCell.classList.contains('cell-added') || clickedCell.classList.contains('cell-deleted');
+
+      if (!isChangedCell) {
+        console.log('⚠️ 點擊的不是 changed cell');
+        return;
+      }
+
+      // 搵出呢個 cell 喺 changedCells 入面嘅 index
+      const clickedRow = clickedCell.closest('tr');
+
+      for (let i = 0; i < this.changedCells.length; i++) {
+        const { row, cell } = this.changedCells[i];
+
+        if (row === clickedRow && cell === clickedCell) {
+          console.log(`✅ 點擊咗 change #${i + 1}`);
+          this.currentChangeIndex = i;
+          this.updateNavigationUI();
+          this.scrollToChange();
+          return;
+        }
+      }
+
+      console.log('⚠️ 搵唔到對應嘅 change');
+    });
   }
 
   /**
-   * Create unified table header
+   * 🔥 修正版：建立 Unified Column List（根據 Header 內容合併）
    */
-  createUnifiedHeader() {
-    const thead = document.createElement('thead');
-    const tr = document.createElement('tr');
+  getUnifiedColumns(sheetDiff) {
+    const oldHeaders = sheetDiff.oldData[0] || {};
+    const newHeaders = sheetDiff.newData[0] || {};
 
-    // Old Index column
-    const thOld = document.createElement('th');
-    thOld.className = 'index-col';
-    thOld.textContent = 'Old';
-    tr.appendChild(thOld);
+    const headerMap = new Map(); // header content → { oldCol, newCol }
 
-    // New Index column
-    const thNew = document.createElement('th');
-    thNew.className = 'index-col';
-    thNew.textContent = 'New';
-    tr.appendChild(thNew);
-
-    // Column headers
-    this._allColumns.forEach((col) => {
-      const th = document.createElement('th');
-      th.textContent = col;
-      tr.appendChild(th);
+    // 1️⃣ 先處理 File A 嘅 headers
+    Object.keys(oldHeaders).forEach((col) => {
+      const content = String(oldHeaders[col] || '').trim();
+      if (content) {
+        headerMap.set(content, { oldCol: col, newCol: null });
+      } else {
+        // 空 header，用 column letter 做 key
+        headerMap.set(`__empty_old_${col}`, { oldCol: col, newCol: null });
+      }
     });
 
-    thead.appendChild(tr);
+    // 2️⃣ 再處理 File B 嘅 headers
+    Object.keys(newHeaders).forEach((col) => {
+      const content = String(newHeaders[col] || '').trim();
+
+      if (content) {
+        if (headerMap.has(content)) {
+          // ✅ 搵到同名 header
+          headerMap.get(content).newCol = col;
+        } else {
+          // ✅ File B 獨有嘅 header
+          headerMap.set(content, { oldCol: null, newCol: col });
+        }
+      } else {
+        // ✅ File B 嘅空欄
+        const key = `__empty_new_${col}`;
+
+        // 檢查係咪 File A 都有同位置嘅空欄
+        const oldEmptyKey = `__empty_old_${col}`;
+        if (headerMap.has(oldEmptyKey)) {
+          headerMap.get(oldEmptyKey).newCol = col;
+          // 改返個 key
+          headerMap.set(`__empty_both_${col}`, headerMap.get(oldEmptyKey));
+          headerMap.delete(oldEmptyKey);
+        } else {
+          headerMap.set(key, { oldCol: null, newCol: col });
+        }
+      }
+    });
+
+    // 3️⃣ 轉換成 array（按照 File B 嘅 column order）
+    const result = [];
+    const processedHeaders = new Set();
+
+    // 先按 File B 嘅順序
+    Object.keys(newHeaders).forEach((newCol) => {
+      for (let [header, mapping] of headerMap) {
+        if (mapping.newCol === newCol && !processedHeaders.has(header)) {
+          processedHeaders.add(header);
+          result.push({
+            header: header.startsWith('__empty_') ? '(Blank Column)' : header,
+            oldCol: mapping.oldCol,
+            newCol: mapping.newCol,
+            type: mapping.oldCol && mapping.newCol ? 'normal' : mapping.oldCol ? 'deleted' : 'added',
+          });
+          break;
+        }
+      }
+    });
+
+    // 再加入 File A 獨有嘅（deleted columns）
+    for (let [header, mapping] of headerMap) {
+      if (!processedHeaders.has(header)) {
+        result.push({
+          header: header.startsWith('__empty_') ? '(Blank Column)' : header,
+          oldCol: mapping.oldCol,
+          newCol: mapping.newCol,
+          type: 'deleted',
+        });
+      }
+    }
+
+    console.log('📋 Unified Columns:', result);
+    return result;
+  }
+
+  /**
+   * 🔥 修正版：建立兩層 Header
+   */
+  buildUnifiedHeader(sheetDiff) {
+    const thead = document.createElement('thead');
+    const unifiedColumns = this.getUnifiedColumns(sheetDiff);
+
+    // ✅ 第1層：欄位名稱 (A, +B, C, -D...)
+    const tr1 = document.createElement('tr');
+
+    // Old Index
+    const th1Old = document.createElement('th');
+    th1Old.className = 'index-col';
+    th1Old.textContent = 'Old';
+    th1Old.rowSpan = 2;
+    tr1.appendChild(th1Old);
+
+    // New Index
+    const th1New = document.createElement('th');
+    th1New.className = 'index-col';
+    th1New.textContent = 'New';
+    th1New.rowSpan = 2;
+    tr1.appendChild(th1New);
+
+    // 資料欄（A, +B, C, -D...）
+    unifiedColumns.forEach((col) => {
+      const th = document.createElement('th');
+
+      let colLabel = col.newCol || col.oldCol; // 優先用 newCol
+
+      if (col.type === 'added') {
+        th.className = 'col-added';
+        colLabel = `+${col.newCol}`;
+      } else if (col.type === 'deleted') {
+        th.className = 'col-deleted';
+        colLabel = `−${col.oldCol}`;
+      }
+
+      th.textContent = colLabel;
+      tr1.appendChild(th);
+    });
+
+    // ✅ 第2層：欄位內容（Header 內容）
+    const tr2 = document.createElement('tr');
+
+    unifiedColumns.forEach((col) => {
+      const th = document.createElement('th');
+
+      if (col.type === 'added') {
+        th.className = 'col-added';
+      } else if (col.type === 'deleted') {
+        th.className = 'col-deleted';
+      }
+
+      th.textContent = col.header;
+      tr2.appendChild(th);
+    });
+
+    thead.appendChild(tr1);
+    thead.appendChild(tr2);
     return thead;
   }
 
   /**
-   * Create unified table body
+   * 🔥 修正版：建立 Body（用 unifiedColumns）
    */
-  createUnifiedBody(rowDiff) {
+  /**
+   * 🔥 修正版：建立 Body
+   */
+  buildUnifiedBody(sheetDiff) {
     const tbody = document.createElement('tbody');
+    const allRows = this.getAllRows(sheetDiff);
+    const unifiedColumns = this.getUnifiedColumns(sheetDiff);
+    const cellChanges = this.buildCellChangeMap(sheetDiff.differences);
+    const rowChanges = this.buildRowChangeMap(sheetDiff.rowChanges);
 
-    rowDiff.forEach((rowData, idx) => {
-      const tr = this.createUnifiedRow(rowData, idx);
+    allRows.forEach((rowInfo) => {
+      const tr = document.createElement('tr');
+
+      const rowChange = rowChanges.get(rowInfo.key);
+
+      if (rowChange?.type === 'added') {
+        tr.className = 'row-added';
+      } else if (rowChange?.type === 'deleted') {
+        tr.className = 'row-deleted';
+      }
+
+      // Old Index
+      const tdOldIdx = document.createElement('td');
+      tdOldIdx.className = 'index-cell old-idx';
+      tdOldIdx.textContent = rowInfo.oldIndex !== null ? rowInfo.oldIndex : '-';
+      tr.appendChild(tdOldIdx);
+
+      // New Index
+      const tdNewIdx = document.createElement('td');
+      tdNewIdx.className = 'index-cell new-idx';
+      tdNewIdx.textContent = rowInfo.newIndex !== null ? rowInfo.newIndex : '-';
+      tr.appendChild(tdNewIdx);
+
+      // 資料欄
+      unifiedColumns.forEach((col) => {
+        const td = document.createElement('td');
+
+        const oldValue = col.oldCol ? rowInfo.oldRow?.[col.oldCol] : null;
+        const newValue = col.newCol ? rowInfo.newRow?.[col.newCol] : null;
+
+        // 🔥 用 header content 做 key match
+        const cellKey = `${rowInfo.oldIndex || rowInfo.newIndex}-${col.header}`;
+        const cellDiff = cellChanges.get(cellKey);
+
+        if (cellDiff) {
+          td.className = 'cell-modified';
+          td.innerHTML = `
+          <div class="cell-value-change">
+            <span class="old-value">${this.formatValue(cellDiff.oldValue)}</span>
+            <span class="value-separator">→</span>
+            <span class="new-value">${this.formatValue(cellDiff.newValue)}</span>
+          </div>
+        `;
+        } else if (col.type === 'added') {
+          td.className = 'cell-added';
+          td.innerHTML = this.formatValue(newValue);
+        } else if (col.type === 'deleted') {
+          td.className = 'cell-deleted';
+          td.innerHTML = this.formatValue(oldValue);
+        } else if (rowChange?.type === 'deleted') {
+          td.className = 'cell-deleted';
+          td.innerHTML = this.formatValue(oldValue);
+        } else if (rowChange?.type === 'added') {
+          td.className = 'cell-added';
+          td.innerHTML = this.formatValue(newValue);
+        } else {
+          td.className = 'cell-unchanged';
+          td.innerHTML = this.formatValue(newValue || oldValue);
+        }
+
+        tr.appendChild(td);
+      });
+
       tbody.appendChild(tr);
     });
 
@@ -254,207 +433,214 @@ class DiffViewer {
   }
 
   /**
-   * Create a single unified row
+   * ✅ 取得所有行（Union of A & B，用 A 欄做 key）
    */
-  createUnifiedRow(rowData, rowIndex) {
-    const tr = document.createElement('tr');
-    tr.className = `row-${rowData.type}`;
-    tr.dataset.rowIndex = rowIndex;
+  getAllRows(sheetDiff) {
+    const rowMap = new Map();
 
-    // Old Index cell
-    const tdOld = document.createElement('td');
-    tdOld.className = 'index-cell old-idx';
-    tdOld.textContent = rowData.oldIndex !== null ? rowData.oldIndex : '-';
-    tr.appendChild(tdOld);
-
-    // New Index cell
-    const tdNew = document.createElement('td');
-    tdNew.className = 'index-cell new-idx';
-    tdNew.textContent = rowData.newIndex !== null ? rowData.newIndex : '-';
-    tr.appendChild(tdNew);
-
-    // Data cells
-    this._allColumns.forEach((colName) => {
-      const cellData = rowData.cells[colName];
-      const td = this.createUnifiedCell(cellData, rowData.type, rowIndex, colName);
-      tr.appendChild(td);
+    sheetDiff.oldData.slice(1).forEach((row, index) => {
+      const key = String(row.A || '').trim() || `old-${index}`;
+      rowMap.set(key, {
+        key: key,
+        oldRow: row,
+        oldIndex: index + 2,
+        newRow: null,
+        newIndex: null,
+      });
     });
 
-    return tr;
-  }
+    sheetDiff.newData.slice(1).forEach((row, index) => {
+      const key = String(row.A || '').trim() || `new-${index}`;
 
-  /**
-   * Create a single unified cell
-   */
-  createUnifiedCell(cellData, rowType, rowIndex, colName) {
-    const td = document.createElement('td');
-    td.dataset.row = rowIndex;
-    td.dataset.col = colName;
-
-    if (!cellData) {
-      td.className = `cell-${rowType}`;
-      td.textContent = '';
-      return td;
-    }
-
-    if (cellData.changed) {
-      td.className = 'cell-modified';
-
-      const oldSpan = document.createElement('span');
-      oldSpan.className = 'old-value';
-      oldSpan.textContent = this.formatCellValue(cellData.oldValue);
-
-      const separator = document.createElement('span');
-      separator.className = 'value-separator';
-      separator.textContent = '→';
-
-      const newSpan = document.createElement('span');
-      newSpan.className = 'new-value';
-      newSpan.textContent = this.formatCellValue(cellData.newValue);
-
-      td.appendChild(oldSpan);
-      td.appendChild(separator);
-      td.appendChild(newSpan);
-
-      td.dataset.hasChange = 'true';
-    } else {
-      td.className = `cell-${rowType}`;
-      td.textContent = this.formatCellValue(cellData.value);
-    }
-
-    return td;
-  }
-
-  /**
-   * Get all column names from row diff data
-   */
-  getAllColumns(rowDiff) {
-    const colSet = new Set();
-
-    rowDiff.forEach((row) => {
-      if (row.cells) {
-        Object.keys(row.cells).forEach((col) => {
-          colSet.add(col);
+      if (rowMap.has(key)) {
+        const existing = rowMap.get(key);
+        existing.newRow = row;
+        existing.newIndex = index + 2;
+      } else {
+        rowMap.set(key, {
+          key: key,
+          oldRow: null,
+          oldIndex: null,
+          newRow: row,
+          newIndex: index + 2,
         });
       }
     });
 
-    // ✅ 按照 A, B, C... 的順序排列
-    return Array.from(colSet).sort((a, b) => {
-      return this.columnToIndex(a) - this.columnToIndex(b);
+    return Array.from(rowMap.values());
+  }
+
+  /**
+   * ✅ 建立 Row Change Map
+   */
+  buildRowChangeMap(rowChanges) {
+    const map = new Map();
+    rowChanges.forEach((change) => {
+      map.set(change.rowKey, change);
     });
+    return map;
   }
 
   /**
-   * ✅ 新增：將欄位名稱轉換為數字索引
+   * ✅ 建立 Cell Change Map
    */
-  columnToIndex(col) {
-    let index = 0;
-    for (let i = 0; i < col.length; i++) {
-      index = index * 26 + (col.charCodeAt(i) - 64);
-    }
-    return index;
+  buildCellChangeMap(differences) {
+    const map = new Map();
+    differences.forEach((diff) => {
+      // ✅ 用 "rowIndex-headerContent" 做 key
+      const key = `${diff.row}-${diff.header}`;
+      map.set(key, diff);
+    });
+    return map;
   }
 
   /**
-   * Format cell value for display
+   * ✅ 格式化值
    */
-  formatCellValue(value) {
+  formatValue(value) {
     if (value === null || value === undefined || value === '') {
-      return '';
+      return '<em class="empty-cell">Blank</em>';
     }
     return String(value);
   }
 
   /**
-   * Collect all changed cells for navigation
+   * ✅ 綁定 Change Navigation 按鈕
    */
-  collectChangedCells() {
-    this.changedCells = [];
-    const cells = document.querySelectorAll('[data-has-change="true"]');
+  setupChangeNavigation() {
+    const prevBtn = document.getElementById('prevChangeBtn');
+    const nextBtn = document.getElementById('nextChangeBtn');
 
-    cells.forEach((cell) => {
-      this.changedCells.push({
-        element: cell,
-        row: cell.dataset.row,
-        col: cell.dataset.col,
-      });
-    });
-
-    this.currentChangeIndex = -1;
-
-    if (this.changedCells.length > 0) {
-      this.showChangeNavigation();
-      this.updateChangeCounter();
-    } else {
-      this.hideChangeNavigation();
+    if (prevBtn) {
+      prevBtn.onclick = () => this.navigateToChange('prev');
     }
 
-    console.log(`Found ${this.changedCells.length} changed cells`);
+    if (nextBtn) {
+      nextBtn.onclick = () => this.navigateToChange('next');
+    }
+
+    // ✅ 加入 Keyboard Shortcuts
+    this.setupKeyboardShortcuts();
   }
 
   /**
-   * Navigate to next/previous change
+   * ✅ 新增：設定鍵盤快捷鍵
+   */
+  setupKeyboardShortcuts() {
+    // 移除舊 listener（避免重複綁定）
+    if (this.keyboardHandler) {
+      document.removeEventListener('keydown', this.keyboardHandler);
+    }
+
+    // 建立新 listener
+    this.keyboardHandler = (e) => {
+      // 如果用戶正在輸入（input/textarea），唔觸發快捷鍵
+      const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+      if (isTyping) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'p') {
+        e.preventDefault();
+        this.navigateToChange('prev');
+      } else if (key === 'n') {
+        e.preventDefault();
+        this.navigateToChange('next');
+      }
+    };
+
+    // 綁定到 document
+    document.addEventListener('keydown', this.keyboardHandler);
+
+    console.log('⌨️ Keyboard shortcuts enabled: P = Previous, N = Next');
+  }
+
+  /**
+   * ✅ 收集所有 changed cells
+   */
+  collectChangedCells() {
+    this.changedCells = [];
+    this.currentChangeIndex = -1;
+
+    const table = document.querySelector('#unifiedTableContainer .diff-table');
+    if (!table) {
+      this.updateNavigationUI();
+      return;
+    }
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) {
+      this.updateNavigationUI();
+      return;
+    }
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((row, rowIndex) => {
+      const cells = row.querySelectorAll('td.cell-modified, td.cell-added, td.cell-deleted');
+      cells.forEach((cell) => {
+        this.changedCells.push({ row, cell });
+      });
+    });
+
+    console.log(`📍 收集到 ${this.changedCells.length} 個變更`);
+    this.updateNavigationUI();
+  }
+
+  /**
+   * ✅ Navigate to change
    */
   navigateToChange(direction) {
     if (this.changedCells.length === 0) return;
 
-    if (this.currentChangeIndex >= 0) {
-      const current = this.changedCells[this.currentChangeIndex];
-      if (current && current.element) {
-        current.element.style.outline = '';
-      }
+    if (direction === 'next') {
+      this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changedCells.length;
+    } else if (direction === 'prev') {
+      this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changedCells.length) % this.changedCells.length;
     }
 
-    this.currentChangeIndex += direction;
-
-    if (this.currentChangeIndex >= this.changedCells.length) {
-      this.currentChangeIndex = 0;
-    } else if (this.currentChangeIndex < 0) {
-      this.currentChangeIndex = this.changedCells.length - 1;
-    }
-
-    const target = this.changedCells[this.currentChangeIndex];
-    if (target && target.element) {
-      target.element.style.outline = '3px solid #667eea';
-      target.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    this.updateChangeCounter();
+    this.updateNavigationUI();
+    this.scrollToChange();
   }
 
   /**
-   * Update change counter display
+   * ✅ 滾動到當前變更
    */
-  updateChangeCounter() {
-    const counter = document.getElementById('changeCounter');
-    if (counter) {
-      const current = this.currentChangeIndex + 1;
-      const total = this.changedCells.length;
-      counter.textContent = `${current} / ${total}`;
-    }
+  scrollToChange() {
+    if (this.currentChangeIndex < 0 || this.currentChangeIndex >= this.changedCells.length) return;
 
+    const { cell } = this.changedCells[this.currentChangeIndex];
+
+    document.querySelectorAll('.cell-highlighted').forEach((c) => {
+      c.classList.remove('cell-highlighted');
+    });
+
+    cell.classList.add('cell-highlighted');
+    cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    setTimeout(() => {
+      cell.classList.remove('cell-highlighted');
+    }, 2000);
+  }
+
+  /**
+   * ✅ 更新 navigation UI
+   */
+  updateNavigationUI() {
+    const counter = document.getElementById('changeCounter');
     const prevBtn = document.getElementById('prevChangeBtn');
     const nextBtn = document.getElementById('nextChangeBtn');
 
-    if (prevBtn) prevBtn.disabled = this.changedCells.length === 0;
-    if (nextBtn) nextBtn.disabled = this.changedCells.length === 0;
-  }
+    if (!counter) return;
 
-  /**
-   * Show change navigation
-   */
-  showChangeNavigation() {
-    const nav = document.getElementById('changeNavigation');
-    if (nav) nav.style.display = 'flex';
-  }
+    const total = this.changedCells.length;
+    const current = this.currentChangeIndex >= 0 ? this.currentChangeIndex + 1 : 0;
 
-  /**
-   * Hide change navigation
-   */
-  hideChangeNavigation() {
-    const nav = document.getElementById('changeNavigation');
-    if (nav) nav.style.display = 'none';
+    counter.textContent = `${current} / ${total}`;
+
+    if (prevBtn && nextBtn) {
+      prevBtn.disabled = total === 0;
+      nextBtn.disabled = total === 0;
+    }
   }
 }
 

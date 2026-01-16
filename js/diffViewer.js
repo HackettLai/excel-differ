@@ -116,7 +116,7 @@ class DiffViewer {
       });
     }
 
-    console.log('✅ Sheet dropdowns populated');
+    // console.log('✅ Sheet dropdowns populated');
   }
 
   /**
@@ -230,7 +230,7 @@ class DiffViewer {
                            clickedCell.classList.contains('cell-deleted');
 
       if (!isChangedCell) {
-        console.log('⚠️ Clicked cell is not a changed cell');
+        // console.log('⚠️ Clicked cell is not a changed cell');
         return;
       }
 
@@ -241,7 +241,7 @@ class DiffViewer {
         const { row, cell } = this.changedCells[i];
 
         if (row === clickedRow && cell === clickedCell) {
-          console.log(`✅ Clicked on change #${i + 1}`);
+          // console.log(`✅ Clicked on change #${i + 1}`);
           this.currentChangeIndex = i;
           this.updateNavigationUI();
           this.scrollToChange();
@@ -348,7 +348,7 @@ class DiffViewer {
       }
     }
 
-    console.log('📋 Unified Columns:', result);
+    // console.log('📋 Unified Columns:', result);
     return result;
   }
 
@@ -679,7 +679,7 @@ class DiffViewer {
     // Bind to document
     document.addEventListener('keydown', this.keyboardHandler);
 
-    console.log('⌨️ Keyboard shortcuts enabled: P = Previous, N = Next');
+    // console.log('⌨️ Keyboard shortcuts enabled: P = Previous, N = Next');
   }
 
   /**
@@ -713,7 +713,7 @@ class DiffViewer {
       });
     });
 
-    console.log(`📍 Collected ${this.changedCells.length} changes`);
+    // console.log(`📍 Collected ${this.changedCells.length} changes`);
     this.updateNavigationUI();
   }
 

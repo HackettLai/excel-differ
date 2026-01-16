@@ -124,8 +124,8 @@ class ExcelDiffer {
       if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
       // Debug logging
-      console.log('File A:', this.fileA);
-      console.log('File B:', this.fileB);
+      // console.log('File A:', this.fileA);
+      // console.log('File B:', this.fileB);
 
       // Validate both files exist
       if (!this.fileA || !this.fileB) {
@@ -144,17 +144,17 @@ class ExcelDiffer {
       // Parse File A
       console.log('Parsing File A...');
       this.dataA = await this.excelParser.parse(this.fileA);
-      console.log('File A parsed:', this.dataA);
+      // console.log('File A parsed:', this.dataA);
 
       // Parse File B
       console.log('Parsing File B...');
       this.dataB = await this.excelParser.parse(this.fileB);
-      console.log('File B parsed:', this.dataB);
+      // console.log('File B parsed:', this.dataB);
 
       // Compare the two files
       console.log('Comparing files...');
       this.diffResults = this.diffEngine.compare(this.dataA, this.dataB);
-      console.log('Diff results:', this.diffResults);
+      // console.log('Diff results:', this.diffResults);
 
       // Initialize DiffViewer with comparison results
       this.diffViewer.init(this.dataA, this.dataB, this.diffResults);

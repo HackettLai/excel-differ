@@ -130,7 +130,7 @@ class ExcelParser {
         // Find maximum number of columns across all rows
         const maxCols = Math.max(...rawData.map(row => row.length));
         
-        console.log('📋 Raw data rows:', rawData.length, 'Max columns:', maxCols);
+        // console.log('📋 Raw data rows:', rawData.length, 'Max columns:', maxCols);
         
         // Convert each row array to an object with column keys A, B, C, etc.
         const dataRows = rawData.map((row, rowIndex) => {
@@ -146,8 +146,8 @@ class ExcelParser {
         });
 
         // Debug logging
-        console.log('✅ First data row:', dataRows[0]);
-        console.log('✅ Column names:', Object.keys(dataRows[0]));
+        // console.log('✅ First data row:', dataRows[0]);
+        // console.log('✅ Column names:', Object.keys(dataRows[0]));
         
         return dataRows;
     }

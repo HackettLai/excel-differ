@@ -163,7 +163,7 @@ class FileHandler {
    */
   handleFileSelect(file, type) {
     // Debug logging
-    console.log('File selected:', file.name, 'Type:', type, 'File object:', file);
+    // console.log('File selected:', file.name, 'Type:', type, 'File object:', file);
 
     // Validate file exists
     if (!file) {

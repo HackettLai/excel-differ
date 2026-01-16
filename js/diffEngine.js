@@ -253,7 +253,7 @@ class DiffEngine {
       }
     });
 
-    console.log('📊 Column Changes:', changes);
+    // console.log('📊 Column Changes:', changes);
     return changes;
   }
 

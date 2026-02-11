@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-HK">
   <head>
     <meta charset="UTF-8" />
@@ -34,7 +34,6 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
   <body>
-    
     <!-- Main Container -->
     <div class="container">
       <!-- Header -->
@@ -79,21 +78,57 @@
 
       <!-- Diff View Section -->
       <div id="diffSection" class="diff-section" style="display: none">
-        <!-- Sheet Selection Row -->
-        <div class="sheet-selection-row">
+        <!-- Sheet & Header Row Selection -->
+        <!-- Diff Section Header -->
+        <div class="diff-header">
           <button id="backBtn" class="back-btn">← Back</button>
+          <h2 id="currentSheetTitle" class="current-sheet-title">Sheet Comparison</h2>
+          <div></div>
+          <!-- Spacer -->
+        </div>
+
+        <!-- Sheet & Header Row Selection -->
+        <div class="sheet-selection-row">
+          <!-- File A Selection -->
           <label>
-            File A:
+            📁 File A:
             <select id="sheetSelectA" class="sheet-select"></select>
           </label>
 
+          <!-- File A Header Row -->
           <label>
-            File B:
+            📋 Header Row:
+            <select id="headerRowA" class="sheet-select header-row-select">
+              <option value="1">Row 1</option>
+            </select>
+          </label>
+
+          <!-- File B Selection -->
+          <label>
+            📁 File B:
             <select id="sheetSelectB" class="sheet-select"></select>
           </label>
 
+          <!-- File B Header Row -->
+          <label>
+            📋 Header Row:
+            <select id="headerRowB" class="sheet-select header-row-select">
+              <option value="1">Row 1</option>
+            </select>
+          </label>
+
+          <!-- Key Match Column (NEW - Fixed ID!) -->
+          <label>
+            🔑 Key Column:
+            <select id="keyColumnSelect" class="sheet-select key-column-select">
+              <option value="">-- Select Key Column --</option>
+            </select>
+          </label>
+
+          <!-- Compare Button -->
           <button id="compareSheetBtn" class="compare-btn">Compare</button>
         </div>
+
         <div class="diff-controls">
           <!-- Legend -->
           <div class="legend-group">
@@ -123,7 +158,7 @@
 
     <!-- Footer -->
     <footer>
-      <p>Built Version 2.0.0 <a href="https://tool.hackettlai.com">Hackett.Lai</a> @ <span id="thisYear"></span> <a href="https://github.com/HackettLai/excel-differ">View it on github</a></p>
+      <p>Built Version 2.1.0 <a href="https://tool.hackettlai.com">Hackett.Lai</a> @ <span id="thisYear"></span> <a href="https://github.com/HackettLai/excel-differ">View it on github</a></p>
     </footer>
 
     <!-- JavaScript Modules -->

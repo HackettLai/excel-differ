@@ -371,26 +371,28 @@ body {
   border-radius: var(--radius-lg);
   background: var(--color-gray-50);
   padding: var(--spacing-lg);
+  width: 100%;
 }
 
 .sheet-selection-row label {
   display: flex;
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--spacing-xs);
+  flex-direction: column;
+  gap: 6px;
   color: var(--color-gray-700);
   font-weight: 500;
+  font-size: 0.9em;
+  white-space: nowrap;
+  flex: 1;
+  width: 16.66%;
 }
 
 .sheet-select {
-  flex: 1;
   cursor: pointer;
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   background: var(--bg-white);
   padding: var(--spacing-xs) var(--spacing-sm);
-  min-width: 200px;
+  min-width: 150px;
   font-size: 14px;
 }
 
@@ -676,7 +678,7 @@ body {
   font-weight: bold;
 }
 
-.empty-cell{
+.empty-cell {
   color: var(--color-gray-400);
   font-style: italic;
 }
@@ -688,7 +690,7 @@ body {
   position: relative;
   z-index: 10;
   -webkit-animation: highlight-pulse 0.6s ease-in-out;
-          animation: highlight-pulse 0.6s ease-in-out;
+  animation: highlight-pulse 0.6s ease-in-out;
   outline: 3px solid var(--color-primary) !important;
   outline-offset: -3px;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
@@ -743,7 +745,7 @@ body {
 
 .spinner {
   -webkit-animation: spin 1s linear infinite;
-          animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
   border: 5px solid rgba(255, 255, 255, 0.3);
   border-top-color: var(--bg-white);
   border-radius: var(--radius-full);
@@ -787,6 +789,29 @@ footer a {
 /* ===========================
    Responsive Design (Mobile)
    =========================== */
+@media (max-width: 1024px) {
+  .sheet-selection-row {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+  }
+
+  .sheet-selection-row label {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .compare-btn{
+    width: 100%;
+  }
+
+  .sheet-select,
+  .header-row-select {
+    min-width: 200px;
+    flex: 1;
+  }
+}
 @media (max-width: 768px) {
   .upload-area {
     gap: var(--spacing-lg);

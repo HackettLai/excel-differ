@@ -2,7 +2,7 @@
 
 A web-based Excel file comparison tool that helps you identify differences between two Excel files quickly and easily. Runs completely in your browser with no server uploads required.
 
-![Excel Differ](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Excel Differ](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 
@@ -14,9 +14,12 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 
 - **📁 Drag & Drop Support** - Simply drag and drop Excel files to compare
 - **🔍 Unified Table View** - View differences in a single unified table with old/new row indices
+- **🎯 Custom Header Row Selection** - Choose which row contains headers (default: Row 1) ⭐ NEW
+- **🔑 Key Column Selection** - Select which column to use for row matching ⭐ NEW
+- **🤖 Auto-Detect Common Columns** - Automatically finds matching columns between files ⭐ NEW
 - **🎯 Smart Column Matching** - Intelligently matches columns by header content, not position
 - **📊 Cell-Level Diff** - Highlights individual cell changes with old → new value display
-- **🔄 Column Reordering Handling** - Correctly matches columns even when reordered (won't falsely report as added/deleted)
+- **🔄 Column Reordering Handling** - Correctly matches columns even when reordered
 - **🎯 Change Navigation** - Jump between changes with Previous/Next buttons or keyboard shortcuts (P/N)
 - **🖱️ Click-to-Navigate** - Click any changed cell to jump to that change
 - **📍 Visual Change Counter** - Track your position through changes (e.g., "5 / 23")
@@ -28,26 +31,34 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 
 [Live Demo](https://excel-differ.hackettlai.com)
 
-## What's New in Version 2.0.0 🎉
+## What's New in Version 2.1.0 🎉
 
-### Major Changes
+### Major Enhancements
 
-- **Unified Table View**: Replaced side-by-side comparison with a single unified table
-- **Old/New Row Indices**: Each row shows both its old (File A) and new (File B) row numbers
-- **Smart Column Matching**: Columns are matched by header content, not position
-  - Handles column reordering correctly
-  - Detects truly added/deleted columns
-  - Preserves column relationships even when columns are moved
-- **Enhanced Cell Display**: Modified cells show "old value → new value" inline
-- **Click-to-Navigate**: Click any changed cell to jump to that change in the navigation sequence
-- **Improved Change Detection**: More accurate detection of column additions/deletions
+- **Custom Header Row Selection**: Choose which row contains your headers (not limited to Row 1)
+  - Supports any row from 1-50 as header row
+  - Independent selection for File A and File B
+  - Automatically adjusts row numbering based on selected header
+  
+- **Key Column Selection**: Choose which column to use for row matching
+  - Auto-detects common columns between both files
+  - No longer limited to Column A for row matching
+  - Intelligently suggests best matching column
+  
+- **Smart Column Detection**: Automatically finds columns that exist in both files
+  - Case-insensitive header matching
+  - Warns when no common columns are found
+  
+- **Dynamic Row Numbering**: Excel row numbers now correctly reflect selected header row
+  - If header is Row 3, data rows start at 4 (not 2)
+  - Accurate row numbers in Old/New index columns
 
-### Breaking Changes from v1.x
+### Bug Fixes
 
-- Removed synchronized scrolling (replaced with unified table)
-- Removed side-by-side sheet view (replaced with single table view)
-- Removed sheet rename detection (simplified to focus on content comparison)
-- Changed sheet selection workflow (now manual selection from dropdowns)
+- ✅ Fixed row number display when using non-default header rows
+- ✅ Corrected Excel row calculation for data rows
+- ✅ Improved row matching accuracy with custom key columns
+
 
 ## Supported File Formats 📋
 
@@ -106,11 +117,20 @@ That's it! No build process or dependencies to install.
    - Click the "Start Comparing" button
    - Wait for files to be parsed and compared
 
-3. **Select Sheets to Compare**
-
-   - If sheets with matching names are found, they'll be auto-selected
-   - Otherwise, manually select sheets from the dropdowns
-   - Click "Compare" to view differences
+3. **Configure Comparison Settings**
+   
+   a. **Select Header Rows** (default: Row 1)
+      - Choose which row contains column headers for File A
+      - Choose which row contains column headers for File B
+      - Supports rows 1-50
+   
+   b. **Select Key Column** (auto-detected)
+      - Tool automatically detects common columns between files
+      - Select which column to use for matching rows
+      - Example: "Employee ID", "Order Number", "Product Code"
+      - ⚠️ If no common columns found, you may need to add one manually
+   
+   c. **Click "Compare"** to view differences
 
 4. **Review Differences**
 
@@ -225,13 +245,24 @@ Quickly navigate through all cell-level changes:
 
 ### Row Matching
 
-Rows are matched using column A as the primary key:
+Rows are matched using a **user-selected Key Column**:
 
-- **Key-Based Matching**: Uses column A value to identify matching rows
-  - Example: Row with "John Doe" in column A matches across files
-- **Fallback Keys**: For rows without column A values, uses position-based keys
-  - `old-{index}` for File A rows
-  - `new-{index}` for File B rows
+- **Key Column Selection**:
+  - Choose any column that exists in both files
+  - Auto-detects common columns by comparing headers
+  - Case-insensitive matching (e.g., "ID" matches "id")
+  - No longer limited to Column A
+  
+- **Key-Based Matching**: 
+  - Uses selected key column value to identify matching rows
+  - Example: If "Employee ID" is selected:
+    - Row with ID "12345" in File A matches ID "12345" in File B
+    - Even if row positions differ, they're still matched
+  
+- **Fallback for Empty Keys**: 
+  - For rows without key values, uses position-based matching
+  - Compares all columns to ensure exact match
+  
 - **Add/Delete Detection**:
   - Added row: Key exists in File B but not in File A
   - Deleted row: Key exists in File A but not in File B
@@ -249,18 +280,18 @@ Excel Differ uses a multi-step pipeline to detect changes:
 
 1. **File Parsing** - Reads Excel files using SheetJS into JavaScript objects
 2. **Column Matching** - Matches columns by header content (not position)
-3. **Row Matching** - Matches rows using Column A as unique identifier
+3. **Row Matching** - Matches rows using user-selected Key Column as unique identifier
 4. **Cell Comparison** - Compares matched cells and detects modifications
 
 **Key Features:**
 - ✅ Handles column reordering (matches by header name)
-- ✅ Handles row reordering (matches by Column A value)
+- ✅ Handles row reordering (matches by Key Column value)
 - ✅ Detects added/deleted columns and rows
 - ✅ Highlights modified cells with old → new display
 
 **Important Design Decision:**
-- **Row matching relies on Column A values** - This enables accurate detection of row reordering, but requires Column A to contain stable unique identifiers
-- If Column A values change, rows cannot be matched correctly (see [Limitations](#limitations-️) for details)
+- **Row matching relies on Key Column values** - This enables accurate detection of row reordering, but requires the Key Column to contain stable unique identifiers
+- If Key Column values change, rows cannot be matched correctly (see [Limitations](#limitations-️) for details)
 
 📖 **[Read detailed technical documentation →](TECHNICAL.md)**
 
@@ -275,27 +306,38 @@ _Note: Shortcuts are disabled when typing in input/textarea/select elements_
 
 ## Limitations ⚠️
 
-### Row Matching Dependency
-**Issue:** Rows are matched using Column A values only
+### Key Column Selection Required
+
+**Issue:** Rows are matched using a single Key Column (user-selected)
+
+**Requirements:**
+- Must select a Key Column that exists in both files
+- Key Column should contain stable, unique identifiers
+- No common columns = Cannot compare rows
 
 **Impact:**
-- If Column A values change between files, rows will be incorrectly matched
-- All cells in that row may show as modified even if unchanged
+- If Key Column values change between files, rows cannot be matched
+- All cells in unmatched rows may show as added/deleted
 
 **Example:**
+File A (using "ID" as key):
 ```
-File A: | 1 | peter | 34 |
-File B: | 2 | peter | 34 |
+|  ID |  Name | Age|
+| 101 | Peter | 34 |
 ```
-**Result:** Treated as different rows  
-**Shows:** "1 → 2" and all cells modified ❌
-
+File B (ID changed):
+```
+|  ID |  Name | Age|
+| 102 | Peter | 34 | ← Different ID!
+```
+**Result:** Treated as different rows (one deleted, one added) ❌
 
 **Solutions:**
-1. ✅ **Use stable IDs in Column A** (employee ID, product code, order number)
-2. ✅ **Add an ID column** if your data doesn't have one
-3. ✅ **Pre-sort both files** by the same key before comparison
-4. ⚠️ **Avoid using auto-incremented numbers** that change between versions
+1. ✅ **Use stable IDs** (employee ID, product code, order number)
+2. ✅ **Add an ID column** if your data doesn't have unique keys
+3. ✅ **Pre-process data** to ensure consistent IDs before comparison
+4. ✅ **Select the correct Key Column** that best identifies your rows
+5. ⚠️ **Avoid using auto-incremented numbers** that change between versions
 
 ---
 
@@ -364,6 +406,19 @@ File B: | 2 | peter | 34 |
 
 - No changes detected in selected sheets
 - Try selecting different sheets to compare
+
+**No common columns found**
+
+- Check that both files have at least one column with identical header names
+- Headers are case-insensitive ("Email" matches "email")
+- Try renaming columns in Excel to match before uploading
+- Ensure both files use the same header row (adjust Header Row selection)
+
+**Row numbers seem wrong**
+
+- Check that you selected the correct Header Row for each file
+- Excel row numbers are calculated as: Header Row + 1 + Data Row Index
+- Example: If Header Row = 3, first data row should be 4
 
 ## Contributing 🤝
 

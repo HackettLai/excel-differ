@@ -1,6 +1,7 @@
 // excelParser.js
 // Parses Excel files (.xlsx, .xls) into JavaScript objects using XLSX.js library
 // Converts Excel sheets into structured data with column headers (A, B, C, etc.)
+// Automatically trims trailing blank rows and columns
 
 /**
  * ExcelParser Class
@@ -99,6 +100,7 @@ class ExcelParser {
      * Converts an Excel worksheet into an array of row objects
      * Uses column names A, B, C, etc. as object keys
      * Preserves all rows including the first row (no header row assumption)
+     * Automatically trims trailing blank rows and columns
      * 
      * @param {Object} worksheet - XLSX worksheet object
      * @returns {Array<Object>} Array of row objects with column keys A, B, C, etc.
@@ -145,11 +147,150 @@ class ExcelParser {
             return rowObj;
         });
 
+        // Trim trailing blank rows and columns
+        const trimmedData = this.trimBlankRowsAndColumns(dataRows);
+
         // Debug logging
-        // console.log('✅ First data row:', dataRows[0]);
-        // console.log('✅ Column names:', Object.keys(dataRows[0]));
+        // console.log('✅ First data row:', trimmedData[0]);
+        // console.log('✅ Column names:', Object.keys(trimmedData[0]));
         
-        return dataRows;
+        return trimmedData;
+    }
+
+    /**
+     * trimBlankRowsAndColumns(data)
+     * Remove trailing blank rows and columns from Excel data
+     * Keeps blank rows/columns in the middle (only removes from end)
+     * 
+     * @param {Array<Object>} data - Raw Excel data
+     * @returns {Array<Object>} Trimmed data
+     */
+    trimBlankRowsAndColumns(data) {
+        if (!data || data.length === 0) return data;
+
+        // Step 1: Find last non-blank row (trim from bottom)
+        let lastRowIndex = data.length - 1;
+        while (lastRowIndex > 0) {
+            // Always keep at least first row (index 0)
+            const row = data[lastRowIndex];
+            if (this.isRowBlank(row)) {
+                lastRowIndex--;
+            } else {
+                break; // Found last non-blank row
+            }
+        }
+
+        // Trim rows (keep up to and including last non-blank row)
+        const trimmedRows = data.slice(0, lastRowIndex + 1);
+
+        // Step 2: Find last non-blank column (trim from right)
+        const allColumns = this.getAllColumns(trimmedRows);
+        const lastColumn = this.findLastNonBlankColumn(trimmedRows, allColumns);
+
+        // Step 3: Trim columns (keep up to and including last non-blank column)
+        const trimmedData = trimmedRows.map((row) => {
+            const trimmedRow = {};
+            allColumns.forEach((col) => {
+                // Only keep columns up to lastColumn
+                if (this.getColumnIndex(col) <= this.getColumnIndex(lastColumn)) {
+                    trimmedRow[col] = row[col] ?? null;
+                }
+            });
+            return trimmedRow;
+        });
+
+        console.log(`🧹 Trimmed: ${data.length - trimmedRows.length} trailing rows, ${allColumns.length - Object.keys(trimmedData[0] || {}).length} trailing columns`);
+
+        return trimmedData;
+    }
+
+    /**
+     * isRowBlank(row)
+     * Check if a row is completely blank (all cells empty or null)
+     * 
+     * @param {Object} row - Row object with column keys
+     * @returns {boolean} True if row is completely blank
+     */
+    isRowBlank(row) {
+        if (!row) return true;
+
+        // Check if all cells in row are empty
+        return Object.values(row).every((cell) => {
+            // Consider null, undefined, empty string, or whitespace-only as blank
+            if (cell === null || cell === undefined || cell === '') return true;
+            if (typeof cell === 'string' && cell.trim() === '') return true;
+            return false;
+        });
+    }
+
+    /**
+     * getAllColumns(data)
+     * Get all unique column keys from dataset
+     * 
+     * @param {Array<Object>} data - Array of row objects
+     * @returns {Array<string>} Sorted column keys (e.g., ['A', 'B', 'C', ...])
+     */
+    getAllColumns(data) {
+        const columnSet = new Set();
+
+        // Collect all column keys from all rows
+        data.forEach((row) => {
+            Object.keys(row).forEach((col) => columnSet.add(col));
+        });
+
+        // Sort columns alphabetically (A, B, C, ..., Z, AA, AB, ...)
+        return Array.from(columnSet).sort((a, b) => {
+            return this.getColumnIndex(a) - this.getColumnIndex(b);
+        });
+    }
+
+    /**
+     * findLastNonBlankColumn(data, allColumns)
+     * Find the rightmost column that contains any non-blank data
+     * 
+     * @param {Array<Object>} data - Array of row objects
+     * @param {Array<string>} allColumns - All column keys
+     * @returns {string} Last non-blank column key (e.g., 'C')
+     */
+    findLastNonBlankColumn(data, allColumns) {
+        // Iterate from rightmost column to left
+        for (let i = allColumns.length - 1; i >= 0; i--) {
+            const col = allColumns[i];
+
+            // Check if this column has any non-blank cell in any row
+            const hasData = data.some((row) => {
+                const cell = row[col];
+
+                // Check if cell has meaningful data
+                if (cell === null || cell === undefined || cell === '') return false;
+                if (typeof cell === 'string' && cell.trim() === '') return false;
+
+                return true; // Cell has data
+            });
+
+            if (hasData) {
+                return col; // Found last non-blank column
+            }
+        }
+
+        // Fallback: keep at least column A
+        return allColumns[0] || 'A';
+    }
+
+    /**
+     * getColumnIndex(col)
+     * Convert column letter(s) to numeric index for sorting
+     * Examples: A=0, B=1, Z=25, AA=26, AB=27
+     * 
+     * @param {string} col - Column letter(s) (e.g., 'A', 'AB', 'ZZ')
+     * @returns {number} Numeric index
+     */
+    getColumnIndex(col) {
+        let index = 0;
+        for (let i = 0; i < col.length; i++) {
+            index = index * 26 + (col.charCodeAt(i) - 64); // A=1, B=2, ...
+        }
+        return index - 1; // Convert to 0-based index
     }
 
     /**

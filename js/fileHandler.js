@@ -162,19 +162,33 @@ class FileHandler {
    * @param {string} type - Either 'A' or 'B' indicating which file slot
    */
   handleFileSelect(file, type) {
-    // Debug logging
-    // console.log('File selected:', file.name, 'Type:', type, 'File object:', file);
-
     // Validate file exists
     if (!file) {
       console.error('No file provided');
       return;
     }
 
-    // Validate file extension (must be .xlsx or .xls)
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      alert('Please select a valid Excel file (.xlsx or .xls)');
+    // Validate file extension (must be .xlsx, .xls, or .csv)
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      alert('Please select a valid Excel or CSV file (.xlsx, .xls, .csv)');
       return;
+    }
+
+    // Show CSV encoding notice once per session
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      // Check if user has already been warned in this session
+      const hasSeenCSVWarning = sessionStorage.getItem('csvEncodingWarningShown');
+
+      if (!hasSeenCSVWarning) {
+        const confirmMsg = '⚠️ CSV File Encoding Notice\n\n' + 'CSV files must be saved in UTF-8 encoding.\n\n' + 'If you see garbled Chinese characters (e.g., â°è»æ‰«), please:\n' + '1️⃣ Open CSV in Excel or Notepad++\n' + '2️⃣ Click "Save As" → Select "UTF-8" encoding\n' + '3️⃣ Re-upload the file\n\n' + 'Continue with current file?\n\n' + '(This message will only show once per session)';
+
+        if (!confirm(confirmMsg)) {
+          return;
+        }
+
+        // Mark warning as shown for this session
+        sessionStorage.setItem('csvEncodingWarningShown', 'true');
+      }
     }
 
     // Store file in appropriate slot

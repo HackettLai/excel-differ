@@ -102,17 +102,18 @@ class ExcelDiffer {
 
   /**
    * compareFiles()
-   * Main comparison workflow - parses and compares both Excel files
-   * Async function that handles the entire comparison process
+   * Main comparison workflow that parses and compares both Excel files.
+   * Handles file type detection and adapts the comparison flow accordingly.
    *
    * Process:
    * 1. Shows loading overlay
    * 2. Validates both files exist and are File objects
    * 3. Parses File A using excelParser
    * 4. Parses File B using excelParser
-   * 5. Compares parsed data using diffEngine
-   * 6. Initializes DiffViewer with results
-   * 7. Switches UI from upload view to diff view
+   * 5. Determines file types and comparison mode
+   * 6. For Excel files: compares all sheets automatically
+   * 7. For mixed file types: initializes UI then auto-triggers first sheet comparison
+   * 8. Switches UI from upload view to diff view
    *
    * @throws {Error} If files are missing or invalid
    */
@@ -122,10 +123,6 @@ class ExcelDiffer {
     try {
       // Show loading overlay
       if (loadingOverlay) loadingOverlay.style.display = 'flex';
-
-      // Debug logging
-      // console.log('File A:', this.fileA);
-      // console.log('File B:', this.fileB);
 
       // Validate both files exist
       if (!this.fileA || !this.fileB) {
@@ -142,29 +139,51 @@ class ExcelDiffer {
       }
 
       // Parse File A
-      console.log('Parsing File A...');
+      console.log('📂 Parsing File A:', this.fileA.name);
       this.dataA = await this.excelParser.parse(this.fileA);
-      // console.log('File A parsed:', this.dataA);
 
       // Parse File B
-      console.log('Parsing File B...');
+      console.log('📂 Parsing File B:', this.fileB.name);
       this.dataB = await this.excelParser.parse(this.fileB);
-      // console.log('File B parsed:', this.dataB);
 
-      // Compare the two files
-      console.log('Comparing files...');
-      this.diffResults = this.diffEngine.compare(this.dataA, this.dataB);
-      // console.log('Diff results:', this.diffResults);
+      // Determine file types and select comparison mode
+      const bothExcel = this.fileA.name.endsWith('.xlsx') && this.fileB.name.endsWith('.xlsx');
 
-      // Initialize DiffViewer with comparison results
-      this.diffViewer.init(this.dataA, this.dataB, this.diffResults);
+      if (bothExcel) {
+        // Excel vs Excel: automatically compare all sheets
+        console.log('📊 Mode: Excel vs Excel (auto-compare all sheets)');
+
+        this.diffResults = this.diffEngine.compare(this.dataA, this.dataB);
+
+        // Create fresh DiffViewer instance
+        this.diffViewer = new DiffViewer();
+        this.diffViewer.init(this.dataA, this.dataB, this.diffResults);
+      } else {
+        // Mixed file types: initialize UI then automatically compare first sheet
+        console.log('📊 Mode: Mixed (CSV/Excel) - auto-compare first sheet');
+
+        // Create fresh DiffViewer instance and initialize UI
+        this.diffViewer = new DiffViewer();
+        this.diffViewer.init(this.dataA, this.dataB, null);
+
+        // Wait for UI to render, then automatically trigger comparison
+        setTimeout(() => {
+          const compareBtn = document.getElementById('compareSheetBtn');
+          if (compareBtn) {
+            console.log('Automatically triggering comparison...');
+            compareBtn.click();
+          } else {
+            console.error('Compare button not found');
+          }
+        }, 150);
+      }
 
       // Switch to diff view
       this.hideUploadSection();
       this.showDiffSection();
     } catch (error) {
       // Error handling
-      console.error('Error comparing files:', error);
+      console.error('❌ Error comparing files:', error);
       alert('Error comparing files: ' + error.message);
     } finally {
       // Always hide loading overlay
@@ -197,6 +216,24 @@ class ExcelDiffer {
     this.dataB = null;
     this.diffResults = null;
 
+    // Reset DiffViewer state by clearing all stored data and rendered UI
+    if (this.diffViewer) {
+      this.diffViewer.dataA = null;
+      this.diffViewer.dataB = null;
+      this.diffViewer.diffResults = null;
+      this.diffViewer.changedCells = [];
+      this.diffViewer.currentChangeIndex = -1;
+
+      // Clear all dropdown selectors
+      this.clearDiffViewDropdowns();
+
+      // Clear the comparison results table
+      const tableContainer = document.getElementById('unifiedTableContainer');
+      if (tableContainer) {
+        tableContainer.innerHTML = '';
+      }
+    }
+
     // Reset FileHandler (clears file inputs)
     this.fileHandler.reset();
 
@@ -207,6 +244,24 @@ class ExcelDiffer {
     // Disable "Start Comparing" button
     const startCompareBtn = document.getElementById('startCompareBtn');
     if (startCompareBtn) startCompareBtn.disabled = true;
+  }
+
+  /**
+   * clearDiffViewDropdowns()
+   * Resets all dropdown selectors in the diff view to their initial state
+   */
+  clearDiffViewDropdowns() {
+    const sheetSelectA = document.getElementById('sheetSelectA');
+    const sheetSelectB = document.getElementById('sheetSelectB');
+    const headerRowA = document.getElementById('headerRowA');
+    const headerRowB = document.getElementById('headerRowB');
+    const keyColumnSelect = document.getElementById('keyColumnSelect');
+
+    if (sheetSelectA) sheetSelectA.innerHTML = '';
+    if (sheetSelectB) sheetSelectB.innerHTML = '';
+    if (headerRowA) headerRowA.innerHTML = '';
+    if (headerRowB) headerRowB.innerHTML = '';
+    if (keyColumnSelect) keyColumnSelect.innerHTML = '<option value="">-- Select Key Column --</option>';
   }
 
   /**

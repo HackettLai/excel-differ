@@ -2,7 +2,7 @@
 
 A web-based Excel file comparison tool that helps you identify differences between two Excel files quickly and easily. Runs completely in your browser with no server uploads required.
 
-![Excel Differ](https://img.shields.io/badge/version-2.1.0-blue.svg)
+![Excel Differ](https://img.shields.io/badge/version-2.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 
@@ -13,10 +13,12 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 ## Features ✨
 
 - **📁 Drag & Drop Support** - Simply drag and drop Excel files to compare
+- **📄 CSV File Support** - Supports CSV files with UTF-8 encoding (one-time session warning) ⭐ NEW
 - **🔍 Unified Table View** - View differences in a single unified table with old/new row indices
-- **🎯 Custom Header Row Selection** - Choose which row contains headers (default: Row 1) ⭐ NEW
-- **🔑 Key Column Selection** - Select which column to use for row matching ⭐ NEW
-- **🤖 Auto-Detect Common Columns** - Automatically finds matching columns between files ⭐ NEW
+- **📍 Position-based Comparison** - Option to match rows strictly by position without requiring a key column ⭐ NEW
+- **🎯 Custom Header Row Selection** - Choose which row contains headers (default: Row 1)
+- **🔑 Key Column Selection** - Select which column to use for row matching
+- **🤖 Auto-Detect Common Columns** - Automatically finds matching columns between files
 - **🎯 Smart Column Matching** - Intelligently matches columns by header content, not position
 - **📊 Cell-Level Diff** - Highlights individual cell changes with old → new value display
 - **🔄 Column Reordering Handling** - Correctly matches columns even when reordered
@@ -31,30 +33,20 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 
 [Live Demo](https://excel-differ.hackettlai.com)
 
-## What's New in Version 2.1.0 🎉
+## What's New in Version 2.2.0 🎉
 
 ### Major Enhancements
 
-- **Custom Header Row Selection**: Choose which row contains your headers (not limited to Row 1)
-  - Supports any row from 1-50 as header row
-  - Independent selection for File A and File B
-  - Automatically adjusts row numbering based on selected header
-  
-- **Key Column Selection**: Choose which column to use for row matching
-  - Auto-detects common columns between both files
-  - No longer limited to Column A for row matching
-  - Intelligently suggests best matching column
-  
-- **Smart Column Detection**: Automatically finds columns that exist in both files
-  - Case-insensitive header matching
-  - Warns when no common columns are found
-  
-- **Dynamic Row Numbering**: Excel row numbers now correctly reflect selected header row
-  - If header is Row 3, data rows start at 4 (not 2)
-  - Accurate row numbers in Old/New index columns
+- **Position-based Comparison**: New mode that matches rows strictly by their order when a key column is not desired or available. Useful for simple datasets or when row identity is implied by position.
 
-### Bug Fixes
+- **Enhanced CSV Handling**: Added automatic encoding detection (UTF-8, GBK, Big5) with a one‑time session warning to avoid garbled text. CSV uploads are now more robust across different character sets.
 
+### Bug Fixes & Improvements
+
+- ✅ Fixed header row dropdown not populating when no sheets are selected
+- ✅ Corrected rendering method selection for position-based comparison mode
+- ✅ **Improved CSV warning UX - now shows only once per browser session** ⭐ NEW
+- ✅ Fixed CSV warning display logic and session storage handling
 - ✅ Fixed row number display when using non-default header rows
 - ✅ Corrected Excel row calculation for data rows
 - ✅ Improved row matching accuracy with custom key columns
@@ -64,8 +56,15 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 
 - `.xlsx` - Excel 2007+ files
 - `.xls` - Excel 97-2003 files
+- `.csv` - Comma-separated values files (UTF-8 encoding recommended) ⭐ NEW
 
 **File Size Limit:** 50MB per file
+
+**CSV File Notes:** ⭐ NEW
+- ✅ CSV files must be saved in UTF-8 encoding
+- ⚠️ A one-time warning will appear when uploading CSV files
+- 💡 If you see garbled Chinese characters, re-save your CSV as UTF-8 in Excel or Notepad++
+- 🔄 Warning only shows once per browser session (cleared on page refresh)
 
 ## Getting Started 🚀
 

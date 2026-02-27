@@ -4,14 +4,15 @@
 
 1. [Processing Pipeline Overview](#processing-pipeline-overview)
 2. [File Reading & Parsing](#1-file-reading--parsing)
-3. [Header Row Configuration](#2-header-row-configuration-new-in-v210)
-4. [Column Matching (Header-Based)](#3-column-matching-header-based)
-5. [Row Matching (Key Column-Based)](#4-row-matching-key-column-based)
-6. [Cell Comparison](#5-cell-comparison)
-7. [Complete Example](#complete-example)
-8. [Implementation Details](#implementation-details)
-9. [Edge Cases & Limitations](#edge-cases--limitations)
-10. [Performance Considerations](#performance-considerations)
+3. [Header Row Configuration](#2-header-row-configuration-introduced-in-v210)
+4. [Position-Based Comparison](#3-position-based-comparison-new-in-v220)
+5. [Column Matching (Header-Based)](#4-column-matching-header-based)
+6. [Row Matching (Key Column-Based)](#5-row-matching-key-column-based)
+7. [Cell Comparison](#6-cell-comparison)
+8. [Complete Example](#complete-example)
+9. [Implementation Details](#implementation-details)
+10. [Edge Cases & Limitations](#edge-cases--limitations)
+11. [Performance Considerations](#performance-considerations)
 
 ---
 
@@ -66,7 +67,7 @@
 ```
 
 **Data Flow:**
-1. Excel files → SheetJS → JS Objects
+1. Excel/CSV files → SheetJS → JS Objects
 2. User selects Header Rows & Key Column
 3. Extract headers & build column maps
 4. Extract Key Column values & build row maps
@@ -84,7 +85,13 @@ Excel/CSV File → SheetJS (xlsx) → JavaScript Object
 **Input Files:**
 
 - File A (old version) and File B (new version)
-- Supported formats: `.xlsx`, `.xls`, `.csv`
+- Supported formats: `.xlsx`, `.xls`, `.csv` ⭐ NEW
+
+**CSV File Handling (NEW in v2.2.0):**
+- ✅ Automatic UTF-8 encoding detection
+- ✅ Fallback to GBK/Big5 for Chinese characters
+- ⚠️ One-time session warning on first CSV upload
+- 💡 Warning stored in `sessionStorage` (cleared on page refresh)
 
 **Parsing Result:**
 
@@ -114,7 +121,7 @@ Excel/CSV File → SheetJS (xlsx) → JavaScript Object
 
 ---
 
-## 2. Header Row Configuration (NEW in v2.1.0)
+## 2. Header Row Configuration (introduced in v2.1.0)
 
 **Before comparison, users configure:**
 
@@ -204,6 +211,7 @@ selectedKeyColumn = "B"  // User selects "Employee ID"
 
 **Dropdown Shows:**
 ```
+[ ] (Use Row Position)     ← NEW in v2.2.0
 [ ] Employee ID  ← Default (first common column)
 [ ] Name
 [ ] Email
@@ -211,13 +219,49 @@ selectedKeyColumn = "B"  // User selects "Employee ID"
 
 **Error Handling:**
 - ⚠️ If no common columns found → Show warning
-- ⚠️ User must select a key column before comparison
+- ⚠️ User must select a key column before comparison (or use Position mode)
 
 ---
 
-## 3. Column Matching (Header-Based)
+## 3. Position-Based Comparison (NEW in v2.2.0)
 
-### Step 3.1: Extract Headers from Selected Header Row
+Position-based mode allows rows to be matched purely by their order when a reliable key column is not available. Unlike key-column matching, this mode does not require the user to select a column; all rows are compared sequentially. This is useful for simple spreadsheets where row identity is implied by position or where all rows share identical structure.
+
+### Behavior
+- Rows are paired one-to-one by index after header adjustment.
+- Added or deleted rows are detected when one file has more rows than the other.
+- Cell comparisons proceed across matched indexes using the same column mapping logic.
+- In the diff viewer, changes are rendered similarly but without row-key labels.
+
+### Limitations
+
+#### Issue: Rows are matched only by their order
+
+- Works without choosing a key column, but any insertion or deletion in the middle of the dataset will shift all subsequent row pairings and result in a cascade of false positives.
+- Added/deleted rows are detected, but the remaining rows remain aligned by index rather than by a stable identifier.
+- Users should only enable position-based mode for simple lists where row order is guaranteed to be consistent across versions.
+
+**Example:**
+
+```
+File A rows: [A, B, C]
+File B rows: [A, X, B, C]
+
+// Position-based result: Row 2 (B) compared with X → flagged as change
+// all subsequent rows misaligned
+```
+
+**Best Practice:**
+- Only use position mode when no reliable key column exists.
+- If data may have insertions/deletions, prefer key‑column matching.
+
+*The remaining sections describe key-column matching which remains the default mode.*
+
+---
+
+## 4. Column Matching (Header-Based)
+
+### Step 4.1: Extract Headers from Selected Header Row
 
 ```javascript
 File A (Header Row = 3):
@@ -227,7 +271,7 @@ File B (Header Row = 1):
   Headers: { A: "Employee ID", B: "Name", C: "Phone", D: "Email", E: "Department" }
 ```
 
-### Step 3.2: Build Header-to-Column Maps
+### Step 4.2: Build Header-to-Column Maps
 
 ```javascript
 // Map: header content → column letter
@@ -247,7 +291,7 @@ File B: {
 }
 ```
 
-### Step 3.3: Detect Column Changes
+### Step 4.3: Detect Column Changes
 
 ```
 For each header in File A:
@@ -275,18 +319,18 @@ For each header in File B:
 
 ---
 
-## 4. Row Matching (Key Column-Based)
+## 5. Row Matching (Key Column-Based)
 
 **NEW in v2.1.0:** Users select which column to use as the Key Column for row matching.
 
-### Step 4.1: User Selects Key Column
+### Step 5.1: User Selects Key Column
 
 ```javascript
 // User selects Key Column from dropdown (auto-detected common columns)
 selectedKeyColumn = "B"  // "Employee ID" column
 ```
 
-### Step 4.2: Extract Row Keys from Selected Key Column
+### Step 5.2: Extract Row Keys from Selected Key Column
 
 ```javascript
 File A (Header Row = 1, Key Column = B):
@@ -305,7 +349,7 @@ File B (Header Row = 1, Key Column = A):  ← Note: Same header, different colum
 - File B: "Employee ID" is in column A (reordered)
 - Tool correctly extracts keys from both locations
 
-### Step 4.3: Build Row Maps
+### Step 5.3: Build Row Maps
 
 ```javascript
 File A: {
@@ -321,7 +365,7 @@ File B: {
 }
 ```
 
-### Step 4.4: Detect Row Changes
+### Step 5.4: Detect Row Changes
 
 ```
 For each row key in File A:
@@ -363,7 +407,7 @@ For each row key in File B:
   - Column positions differ (B vs A)
 - They're matched by Key Column **value** ("E12345")
 
-### Step 4.5: Handle Empty Key Values (Fallback)
+### Step 5.5: Handle Empty Key Values (Fallback)
 
 For rows with empty Key Column values:
 
@@ -393,9 +437,9 @@ Result: Treated as DELETED (old) + ADDED (new) ❌
 
 ---
 
-## 5. Cell Comparison
+## 6. Cell Comparison
 
-### Step 5.1: For Each MATCHED Row
+### Step 6.1: For Each MATCHED Row
 
 ```
 For each MATCHED column header:
@@ -408,7 +452,7 @@ For each MATCHED column header:
      └─ If different → MODIFIED 🔄
 ```
 
-### Step 5.2: Example Cell Comparison
+### Step 6.2: Example Cell Comparison
 
 **Scenario:**
 
@@ -438,7 +482,7 @@ Step 5: Compare values
   → Mark as MODIFIED 🔄
 ```
 
-### Step 5.3: Cell Change Result
+### Step 6.3: Cell Change Result
 
 ```javascript
 {
@@ -888,6 +932,30 @@ function compareCells(oldRow, newRow, headerToOldCol, headerToNewCol) {
 
 ---
 
+### 1.1 Position-Based Mode Limitations (NEW in v2.2.0)
+
+#### Issue: Rows are matched only by their order
+
+- Works without choosing a key column, but any insertion or deletion in the middle of the dataset will shift all subsequent row pairings and result in a cascade of false positives.
+- Added/deleted rows are detected, but the remaining rows remain aligned by index rather than by a stable identifier.
+- Users should only enable position-based mode for simple lists where row order is guaranteed to be consistent across versions.
+
+**Example:**
+
+```
+File A rows: [A, B, C]
+File B rows: [A, X, B, C]
+
+// Position-based result: Row 2 (B) compared with X → flagged as change
+// all subsequent rows misaligned
+```
+
+**Best Practice:**
+- Only use position mode when no reliable key column exists.
+- If data may have insertions/deletions, prefer key‑column matching.
+
+---
+
 ### 2. Header Row Position
 
 #### Issue: Different files may have headers in different rows
@@ -1033,7 +1101,53 @@ Result:
 
 ---
 
-### 6. Data Type Inconsistencies
+### 6. CSV Encoding and Character Sets (NEW in v2.2.0)
+
+#### Issue: CSV files may use non‑UTF‑8 encodings
+
+- Many Chinese users save CSV in GBK/GB2312, which appears garbled when read as UTF‑8.
+- The parser automatically detects UTF‑8; if decoding fails it attempts GBK/Big5 and falls back to a non‑fatal UTF‑8 decode.
+- A one‑time session warning alerts users to save their CSV as UTF‑8 if garbling occurs.
+
+**Behavior:**
+- If UTF‑8 decode succeeds without replacement characters, data is used directly.
+- If UTF‑8 fails, the parser logs a warning and retries with common alternatives.
+- If all attempts fail, an error is thrown.
+
+**Warning Display Logic (NEW in v2.2.0):**
+- ✅ Warning shows **only once per browser session** using `sessionStorage`
+- ✅ After first display, subsequent CSV uploads skip the warning
+- ✅ Refreshing the page clears `sessionStorage`, warning will appear again
+- ✅ Opening a new tab/window will show the warning again (independent sessions)
+
+**Implementation:**
+```javascript
+// Check if warning already shown in this session
+const hasSeenCSVWarning = sessionStorage.getItem('csvEncodingWarningShown');
+
+if (!hasSeenCSVWarning) {
+  // Show warning popup
+  const userConfirmed = confirm('⚠️ CSV File Encoding Notice...');
+  
+  if (userConfirmed) {
+    // Mark warning as shown
+    sessionStorage.setItem('csvEncodingWarningShown', 'true');
+  }
+}
+```
+
+**Recommendation:**
+- Always save CSV files in UTF-8 when possible.
+- If garbled text appears, re-export the file with the correct encoding before reuploading.
+
+**User Impact:**
+- ✅ Reduces annoyance from repeated warnings
+- ✅ Warning persists throughout comparison workflow
+- ✅ Clears naturally on page refresh (appropriate reset point)
+
+---
+
+### 7. Data Type Inconsistencies
 
 #### Issue: Same column may have different data types
 
@@ -1067,7 +1181,7 @@ Result: Depends on date formatting
 
 ---
 
-### 7. Large Files
+### 8. Large Files
 
 #### Issue: Browser memory limitations
 
@@ -1089,7 +1203,7 @@ Result: Depends on date formatting
 
 ---
 
-### 8. Special Characters in Headers
+### 9. Special Characters in Headers
 
 #### Issue: Headers may contain special characters
 
@@ -1189,26 +1303,29 @@ Result: NOT matched ❌
 
 ## Conclusion
 
-Excel Differ v2.1.0 provides a robust, header-based comparison system with the following key features:
+Excel Differ v2.2.0 provides a robust, header-based comparison system with the following key features:
 
-✅ **Flexible Header Row Selection** - Users choose where headers are located
-✅ **Custom Key Column Selection** - Any common column can be used for row matching
-✅ **Smart Column Matching** - Handles column reordering gracefully
-✅ **Accurate Row Matching** - Uses Key Column values, not positions
-✅ **Cell-Level Precision** - Detects individual cell changes
-✅ **Unified Diff View** - All changes in one table with old/new indices
+✅ **Flexible Header Row Selection** - Users choose where headers are located  
+✅ **Position-Based Comparison Mode** - NEW in v2.2.0: Match rows by position when key column unavailable  
+✅ **Custom Key Column Selection** - Any common column can be used for row matching  
+✅ **Smart Column Matching** - Handles column reordering gracefully  
+✅ **Accurate Row Matching** - Uses Key Column values, not positions  
+✅ **Cell-Level Precision** - Detects individual cell changes  
+✅ **Unified Diff View** - All changes in one table with old/new indices  
+✅ **CSV Support with Encoding Detection** - NEW in v2.2.0: UTF-8, GBK, Big5 with one-time session warning
 
 **Best Practices:**
-1. Ensure Key Column contains stable, unique identifiers
+1. Ensure Key Column contains stable, unique identifiers (or use Position mode for simple lists)
 2. Verify header row selection before comparison
 3. Review auto-detected common columns
 4. Pre-process data to ensure consistency
 5. Use appropriate file sizes for browser performance
+6. Save CSV files in UTF-8 encoding when possible
 
 For more information, see [README.md](README.md).
 
 ---
 
-**Version:** 2.1.0  
-**Last Updated:** January 2025  
+**Version:** 2.2.0  
+**Last Updated:** February 2026  
 **Author:** Hackett.Lai

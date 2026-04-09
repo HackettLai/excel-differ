@@ -127,7 +127,7 @@ body {
   border-radius: var(--radius-xl);
   background: var(--bg-white);
   width: calc(100vw - 40px);
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* ===========================
@@ -366,7 +366,8 @@ body {
 
 .sheet-selection-row {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--spacing-md);
   border-radius: var(--radius-lg);
   background: var(--color-gray-50);
@@ -376,14 +377,14 @@ body {
 
 .sheet-selection-row label {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 6px;
+  width: 16.66%;
   color: var(--color-gray-700);
   font-weight: 500;
   font-size: 0.9em;
   white-space: nowrap;
-  flex: 1;
-  width: 16.66%;
 }
 
 .sheet-select {
@@ -392,7 +393,6 @@ body {
   border-radius: var(--radius-md);
   background: var(--bg-white);
   padding: var(--spacing-xs) var(--spacing-sm);
-  min-width: 150px;
   font-size: 14px;
 }
 
@@ -418,16 +418,17 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .diff-header {
+  gap: var(--spacing-md);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   border-bottom: 2px solid var(--color-gray-200);
   background: var(--color-gray-50);
-  padding: var(--spacing-lg) var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-lg);
 }
 
 .current-sheet-title {
@@ -473,13 +474,16 @@ body {
 
 .diff-controls {
   display: flex;
+  position: sticky;
+  top: 0;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: var(--spacing-lg);
+  z-index: 999;
   border-bottom: 1px solid var(--color-gray-200);
   background: var(--color-gray-50);
-  padding: 15px var(--spacing-xl);
+  padding: 15px var(--spacing-md);
 }
 
 .change-counter {
@@ -498,6 +502,7 @@ body {
    =========================== */
 .legend-group {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: var(--spacing-lg);
 }
@@ -548,6 +553,7 @@ body {
 #unifiedTableContainer {
   flex: 1;
   min-width: 100%;
+  min-height: fit-content;
   overflow: auto;
 }
 
@@ -790,42 +796,42 @@ footer a {
    Responsive Design (Mobile)
    =========================== */
 @media (max-width: 1024px) {
+  .compare-btn {
+    width: 100%;
+  }
+
+  .header-row-select {
+    flex: 1;
+  }
+  .sheet-select {
+    flex: 1;
+    width: 100%;
+  }
+}
+@media (max-width: 768px) {
   .sheet-selection-row {
     flex-direction: column;
     gap: var(--spacing-sm);
-    align-items: flex-start;
   }
 
   .sheet-selection-row label {
     flex-direction: row;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     width: 100%;
   }
-  .compare-btn{
-    width: 100%;
-  }
-
-  .sheet-select,
-  .header-row-select {
-    min-width: 200px;
-    flex: 1;
-  }
-}
-@media (max-width: 768px) {
   .upload-area {
+    flex-direction: column;
     gap: var(--spacing-lg);
+  }
+  .upload-box {
+    width: 100%;
+    max-width: none;
   }
 
   .vs-divider {
     transform: rotate(90deg);
     padding: 10px 0;
-  }
-
-  .diff-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
   }
 
   .unified-container {

@@ -1,11 +1,11 @@
 // excelParser.js
-// Parses Excel files (.xlsx, .xls) into JavaScript objects using XLSX.js library
+// Parses Excel files (.xlsx, .xls) and CSV files into JavaScript objects using XLSX.js library
 // Converts Excel sheets into structured data with column headers (A, B, C, etc.)
-// Automatically trims trailing blank rows and columns
+// Automatically trims leading/trailing blank rows and completely blank columns
 
 /**
  * ExcelParser Class
- * Handles parsing of Excel files into structured JavaScript objects
+ * Handles parsing of Excel and CSV files into structured JavaScript objects
  * Uses XLSX.js library for reading Excel file formats
  */
 class ExcelParser {
@@ -17,27 +17,6 @@ class ExcelParser {
     this.workbook = null; // Stores the current workbook being processed
   }
 
-  /**
-   * parse(file)
-   * Main parsing method - converts Excel file to structured data object
-   *
-   * @param {File} file - The Excel file object to parse
-   * @returns {Promise<Object>} Resolves with parsed workbook data
-   *
-   * Returned Object Structure:
-   * {
-   *   fileName: string,
-   *   sheets: {
-   *     [sheetName]: {
-   *       name: string,
-   *       data: Array<Object>,
-   *       rowCount: number,
-   *       colCount: number
-   *     }
-   *   },
-   *   sheetNames: Array<string>
-   * }
-   */
   /**
    * parse(file)
    * Parses an Excel or CSV file and extracts structured data
@@ -150,10 +129,7 @@ class ExcelParser {
   /**
    * extractSheetData(workbook)
    * Extracts data from all sheets in a workbook
-   * Normalizes data format to ensure consistent structure across both CSV and Excel files
-   *
-   * @param {Object} workbook - XLSX workbook object
-   * @returns {Object} Structured sheet data
+   * ✅ 使用 trim 過後既實際 data length 黎計 rowCount
    */
   extractSheetData(workbook) {
     const result = {
@@ -169,35 +145,44 @@ class ExcelParser {
         header: 'A', // Use A, B, C... as keys
         defval: null, // Default value for empty cells
         raw: false, // Convert values to strings for consistency
-        blankrows: true, // Include blank rows
+        blankrows: true, // Include blank rows initially
       });
 
-      // ✅ Normalize data format
-      const normalizedData = this.normalizeSheetData(jsonData);
+      // ✅ Normalize AND trim data
+      const processedData = this.normalizeAndTrimSheetData(jsonData);
 
-      // Get row count
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-      const rowCount = range.e.r + 1;
+      // ✅ 用處理過既 data length
+      const rowCount = processedData.length;
 
       result.sheets[sheetName] = {
-        data: normalizedData,
-        rowCount: rowCount,
+        data: processedData,
+        rowCount: rowCount, // ✅ 而家係正確既 row count
       };
+
+      console.log(`📊 Sheet "${sheetName}": ${rowCount} rows (after trimming)`);
     });
 
     return result;
   }
 
   /**
-   * normalizeSheetData(jsonData)
-   * Normalizes data format for consistent comparison
-   * Trims whitespace, converts types
+   * normalizeAndTrimSheetData(jsonData)
+   * ✅ Normalize values AND trim blank rows/columns
+   * 
+   * Process:
+   * 1. Normalize all cell values (trim whitespace, remove invisible chars)
+   * 2. Trim leading blank rows
+   * 3. Trim trailing blank rows
+   * 4. Trim completely blank columns
    *
    * @param {Array<Object>} jsonData - Raw sheet data
-   * @returns {Array<Object>} Normalized data
+   * @returns {Array<Object>} Normalized and trimmed data
    */
-  normalizeSheetData(jsonData) {
-    return jsonData.map((row) => {
+  normalizeAndTrimSheetData(jsonData) {
+    if (!jsonData || jsonData.length === 0) return [];
+
+    // Step 1: Normalize all values
+    const normalized = jsonData.map((row) => {
       const normalizedRow = {};
 
       Object.keys(row).forEach((col) => {
@@ -220,160 +205,86 @@ class ExcelParser {
 
       return normalizedRow;
     });
-  }
-  /**
-   * parseCSVWithEncoding(data)
-   * Parses CSV data with automatic encoding detection
-   * Attempts UTF-8 decoding first, then falls back to alternative encodings if needed
-   *
-   * @param {Uint8Array} data - Raw file data
-   * @returns {Object} XLSX workbook object
-   */
-  parseCSVWithEncoding(data) {
-    // Try UTF-8 first
-    let csvText;
 
-    try {
-      // Attempt UTF-8 decoding
-      csvText = new TextDecoder('utf-8').decode(data);
-
-      // Check for mojibake (common pattern when wrong encoding)
-      const hasMojibake = /â|€|™|˜|›|¢|£|¤|¥|¦|§|¨|©|ª|«|¬|®|¯|°|±|²|³|´|µ|¶|·|¸|¹|º|»|¼|½|¾|¿/.test(csvText);
-
-      if (hasMojibake) {
-        console.warn('⚠️ Detected encoding issue, trying GBK/GB2312...');
-        throw new Error('UTF-8 decode failed, trying alternative encoding');
-      }
-
-      console.log('✅ CSV parsed as UTF-8');
-    } catch (error) {
-      // Fallback to GBK (common Chinese encoding)
-      try {
-        csvText = new TextDecoder('gbk').decode(data);
-        console.log('✅ CSV parsed as GBK');
-      } catch (gbkError) {
-        // Last resort: try windows-1252 (Western European)
-        try {
-          csvText = new TextDecoder('windows-1252').decode(data);
-          console.log('✅ CSV parsed as Windows-1252');
-        } catch (finalError) {
-          // If all else fails, use UTF-8 anyway
-          csvText = new TextDecoder('utf-8', { fatal: false }).decode(data);
-          console.warn('⚠️ Using UTF-8 with error recovery');
-        }
+    // Step 2: Trim leading blank rows
+    let firstNonBlankIndex = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      if (!this.isRowBlank(normalized[i])) {
+        firstNonBlankIndex = i;
+        break;
       }
     }
 
-    // Parse CSV text into workbook
-    return XLSX.read(csvText, { type: 'string', raw: true });
-  }
-  /**
-   * parseSheet(worksheet)
-   * Converts an Excel worksheet into an array of row objects
-   * Uses column names A, B, C, etc. as object keys
-   * Preserves all rows including the first row (no header row assumption)
-   * Automatically trims trailing blank rows and columns
-   *
-   * @param {Object} worksheet - XLSX worksheet object
-   * @returns {Array<Object>} Array of row objects with column keys A, B, C, etc.
-   *
-   * Example output:
-   * [
-   *   { A: 'Name', B: 'Age', C: 'City' },
-   *   { A: 'John', B: 25, C: 'NYC' },
-   *   { A: 'Jane', B: 30, C: 'LA' }
-   * ]
-   */
-  parseSheet(worksheet) {
-    // Convert sheet to raw array format (each row is an array)
-    // header: 1 means don't use first row as headers
-    // defval: null sets default value for empty cells
-    // blankrows: true includes blank rows
-    const rawData = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: null,
-      blankrows: true,
-    });
+    const afterLeadingTrim = normalized.slice(firstNonBlankIndex);
 
-    // Handle empty sheets
-    if (rawData.length === 0) {
-      console.warn('Empty sheet');
-      return [];
+    if (firstNonBlankIndex > 0) {
+      console.log(`🧹 Trimmed ${firstNonBlankIndex} leading blank rows`);
     }
 
-    // Find maximum number of columns across all rows
-    const maxCols = Math.max(...rawData.map((row) => row.length));
-
-    // console.log('📋 Raw data rows:', rawData.length, 'Max columns:', maxCols);
-
-    // Convert each row array to an object with column keys A, B, C, etc.
-    const dataRows = rawData.map((row, rowIndex) => {
-      const rowObj = {};
-
-      // Create key-value pairs for each column
-      for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-        const colName = this.getColumnName(colIndex); // Get column name: A, B, C...
-        rowObj[colName] = row[colIndex] ?? null; // Use nullish coalescing for empty cells
+    // Step 3: Trim trailing blank rows
+    let lastNonBlankIndex = afterLeadingTrim.length - 1;
+    for (let i = afterLeadingTrim.length - 1; i >= 0; i--) {
+      if (!this.isRowBlank(afterLeadingTrim[i])) {
+        lastNonBlankIndex = i;
+        break;
       }
+    }
 
-      return rowObj;
-    });
+    const afterTrailingTrim = afterLeadingTrim.slice(0, lastNonBlankIndex + 1);
 
-    // Trim trailing blank rows and columns
-    const trimmedData = this.trimBlankRowsAndColumns(dataRows);
+    const trailingRowsRemoved = afterLeadingTrim.length - afterTrailingTrim.length;
+    if (trailingRowsRemoved > 0) {
+      console.log(`🧹 Trimmed ${trailingRowsRemoved} trailing blank rows`);
+    }
 
-    // Debug logging
-    // console.log('✅ First data row:', trimmedData[0]);
-    // console.log('✅ Column names:', Object.keys(trimmedData[0]));
+    // Step 4: Trim completely blank columns
+    const finalData = this.trimCompletelyBlankColumns(afterTrailingTrim);
 
-    return trimmedData;
+    const totalRowsRemoved = normalized.length - finalData.length;
+    if (totalRowsRemoved > 0) {
+      console.log(`🧹 Total: ${normalized.length} → ${finalData.length} rows`);
+    }
+
+    return finalData;
   }
 
   /**
-   * trimBlankRowsAndColumns(data)
-   * Remove trailing blank rows and columns from Excel data
-   * Keeps blank rows/columns in the middle (only removes from end)
-   *
-   * @param {Array<Object>} data - Raw Excel data
-   * @returns {Array<Object>} Trimmed data
+   * trimCompletelyBlankColumns(data)
+   * ✅ 移除完全空白既列 (所有 rows 都係 blank 既 column)
    */
-  trimBlankRowsAndColumns(data) {
+  trimCompletelyBlankColumns(data) {
     if (!data || data.length === 0) return data;
 
-    // Step 1: Find last non-blank row (trim from bottom)
-    let lastRowIndex = data.length - 1;
-    while (lastRowIndex > 0) {
-      // Always keep at least first row (index 0)
-      const row = data[lastRowIndex];
-      if (this.isRowBlank(row)) {
-        lastRowIndex--;
-      } else {
-        break; // Found last non-blank row
+    const allColumns = this.getAllColumns(data);
+    const nonBlankColumns = [];
+
+    // Check each column
+    allColumns.forEach((col) => {
+      const hasData = data.some((row) => {
+        const cell = row[col];
+        if (cell === null || cell === undefined || cell === '') return false;
+        if (typeof cell === 'string' && cell.trim() === '') return false;
+        return true;
+      });
+
+      if (hasData) {
+        nonBlankColumns.push(col);
       }
+    });
+
+    const trimmedCount = allColumns.length - nonBlankColumns.length;
+    if (trimmedCount > 0) {
+      console.log(`🧹 Trimmed ${trimmedCount} completely blank columns`);
     }
 
-    // Trim rows (keep up to and including last non-blank row)
-    const trimmedRows = data.slice(0, lastRowIndex + 1);
-
-    // Step 2: Find last non-blank column (trim from right)
-    const allColumns = this.getAllColumns(trimmedRows);
-    const lastColumn = this.findLastNonBlankColumn(trimmedRows, allColumns);
-
-    // Step 3: Trim columns (keep up to and including last non-blank column)
-    const trimmedData = trimmedRows.map((row) => {
+    // Rebuild data with only non-blank columns
+    return data.map((row) => {
       const trimmedRow = {};
-      allColumns.forEach((col) => {
-        // Only keep columns up to lastColumn
-        if (this.getColumnIndex(col) <= this.getColumnIndex(lastColumn)) {
-          trimmedRow[col] = row[col] ?? null;
-        }
+      nonBlankColumns.forEach((col) => {
+        trimmedRow[col] = row[col] ?? null;
       });
       return trimmedRow;
     });
-
-    console.log(`🧹 Trimmed: ${data.length - trimmedRows.length} trailing rows, ${allColumns.length - Object.keys(trimmedData[0] || {}).length} trailing columns`);
-
-    return trimmedData;
   }
 
   /**
@@ -414,39 +325,6 @@ class ExcelParser {
     return Array.from(columnSet).sort((a, b) => {
       return this.getColumnIndex(a) - this.getColumnIndex(b);
     });
-  }
-
-  /**
-   * findLastNonBlankColumn(data, allColumns)
-   * Find the rightmost column that contains any non-blank data
-   *
-   * @param {Array<Object>} data - Array of row objects
-   * @param {Array<string>} allColumns - All column keys
-   * @returns {string} Last non-blank column key (e.g., 'C')
-   */
-  findLastNonBlankColumn(data, allColumns) {
-    // Iterate from rightmost column to left
-    for (let i = allColumns.length - 1; i >= 0; i--) {
-      const col = allColumns[i];
-
-      // Check if this column has any non-blank cell in any row
-      const hasData = data.some((row) => {
-        const cell = row[col];
-
-        // Check if cell has meaningful data
-        if (cell === null || cell === undefined || cell === '') return false;
-        if (typeof cell === 'string' && cell.trim() === '') return false;
-
-        return true; // Cell has data
-      });
-
-      if (hasData) {
-        return col; // Found last non-blank column
-      }
-    }
-
-    // Fallback: keep at least column A
-    return allColumns[0] || 'A';
   }
 
   /**
@@ -538,10 +416,12 @@ class ExcelParser {
    * @param {File} file - File object to validate
    * @returns {boolean} True if valid Excel file, false otherwise
    *
-   * Valid Extensions: .xlsx, .xls
+   * Valid Extensions: .xlsx, .xls, .csv
    * Valid MIME Types:
    * - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet (.xlsx)
    * - application/vnd.ms-excel (.xls)
+   * - text/csv (.csv)
+   * - application/csv (.csv)
    */
   static isValidExcelFile(file) {
     if (!file) return false;

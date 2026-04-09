@@ -184,7 +184,7 @@ class ExcelDiffer {
     } catch (error) {
       // Error handling
       console.error('❌ Error comparing files:', error);
-      alert('Error comparing files: ' + error.message);
+      // alert('Error comparing files: ' + error.message);
     } finally {
       // Always hide loading overlay
       if (loadingOverlay) loadingOverlay.style.display = 'none';

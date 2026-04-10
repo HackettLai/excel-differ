@@ -329,6 +329,81 @@ body {
   text-decoration: line-through;
 }
 
+/* ===========================
+   Cell Hover Tooltip
+   =========================== */
+.cell-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  line-height: 1.5;
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+.cell-tooltip-label {
+  font-weight: 600;
+  color: #4caf50;
+  margin-bottom: 4px;
+}
+
+.cell-tooltip-row {
+  display: flex;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.cell-tooltip-row span:first-child {
+  color: #999;
+  min-width: 40px;
+}
+
+/* Make cells hoverable */
+.unified-table td {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .cell-tooltip {
+    font-size: 0.8em;
+    padding: 6px 10px;
+    max-width: 200px;
+    white-space: normal;
+  }
+
+  .cell-tooltip-row {
+    font-size: 0.85em;
+  }
+}
+
+/* Show visual feedback when cell is tapped (mobile only) */
+@media (hover: none) {
+  .unified-table td:active {
+    background-color: rgba(33, 150, 243, 0.1);
+  }
+}
+
 /* Cell Status */
 .diff-table td.cell-modified {
   background-color: var(--color-warning-light);

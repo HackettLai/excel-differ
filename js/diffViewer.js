@@ -1,7 +1,7 @@
 /**
  * diffViewer.js
  * Excel Diff Viewer with Interleaved Row Sorting
- * 
+ *
  * Responsibilities:
  * - Render unified diff table with side-by-side comparison
  * - Handle user interactions (sheet selection, key column selection, navigation)
@@ -19,10 +19,10 @@ import DiffEngine from './diffEngine.js';
  */
 class DiffViewer {
   constructor() {
-    this.dataA = null;           // Parsed data from first Excel file
-    this.dataB = null;           // Parsed data from second Excel file
-    this.diffResults = null;     // Comparison results from DiffEngine
-    this.changedCells = [];      // Array of all changed cells for navigation
+    this.dataA = null; // Parsed data from first Excel file
+    this.dataB = null; // Parsed data from second Excel file
+    this.diffResults = null; // Comparison results from DiffEngine
+    this.changedCells = []; // Array of all changed cells for navigation
     this.currentChangeIndex = -1; // Current position in change navigation
   }
 
@@ -30,7 +30,7 @@ class DiffViewer {
    * init(dataA, dataB, diffResults)
    * Initialize the diff viewer with parsed Excel data and comparison results
    * Sets up dropdowns, auto-selects sheets, and prepares UI for comparison
-   * 
+   *
    * @param {Object} dataA - Parsed data from first Excel file
    * @param {Object} dataB - Parsed data from second Excel file
    * @param {Object} diffResults - Comparison results from DiffEngine
@@ -62,7 +62,7 @@ class DiffViewer {
     // Populate header row and key column dropdowns
     this.populateHeaderRowDropdowns();
     this.populateKeyColumnDropdown();
-    
+
     // Setup event listeners
     this.setupSheetChangeListeners();
     this.setupChangeNavigation();
@@ -218,7 +218,7 @@ class DiffViewer {
    * findCommonColumns(headersA, headersB)
    * Find columns that exist in both sheets with matching names (case-insensitive)
    * Returns array of common columns with their names and column letters
-   * 
+   *
    * @param {Array<string>} headersA - Headers from first sheet
    * @param {Array<string>} headersB - Headers from second sheet
    * @returns {Array<Object>} Array of common columns with { name, colIndex, indexA, indexB }
@@ -262,7 +262,7 @@ class DiffViewer {
   /**
    * getColumnLetter(index)
    * Convert column index (0-based) to Excel column letter (A, B, C, ..., Z, AA, AB, ...)
-   * 
+   *
    * @param {number} index - Zero-based column index
    * @returns {string} Excel column letter
    */
@@ -317,7 +317,7 @@ class DiffViewer {
    * updateHeaderRowDropdown(type)
    * Update header row dropdown when sheet selection changes
    * Rebuilds dropdown options based on selected sheet's row count
-   * 
+   *
    * @param {string} type - 'A' or 'B' to specify which file
    */
   updateHeaderRowDropdown(type) {
@@ -346,7 +346,7 @@ class DiffViewer {
    * findMatchingSheet()
    * Find sheets with matching names between both files
    * Used for auto-selection if sheet names match
-   * 
+   *
    * @returns {Object|null} { sheetA, sheetB } or null if no match found
    */
   findMatchingSheet() {
@@ -466,7 +466,7 @@ class DiffViewer {
    * adjustDataForHeaderRow(data, headerRow)
    * Slice data array to start from the specified header row
    * Ensures header row is treated as row 0 in the returned array
-   * 
+   *
    * @param {Array<Object>} data - Sheet data
    * @param {number} headerRow - Header row number (1-based)
    * @returns {Array<Object>} Adjusted data starting from header row
@@ -489,7 +489,7 @@ class DiffViewer {
    * Render unified diff table showing side-by-side comparison
    * Displays added/deleted/modified rows with visual highlighting
    * Uses interleaved sorting: deleted rows inserted before next new row position
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results from DiffEngine
    * @param {string} keyColumn - Key column used for matching
    */
@@ -561,7 +561,7 @@ class DiffViewer {
    * Build unified column list merging columns from both sheets
    * Handles added/deleted columns and blank columns
    * Returns columns in new file's order, with deleted columns appended at end
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results
    * @returns {Array<Object>} Array of unified columns with { header, oldCol, newCol, type }
    */
@@ -682,7 +682,7 @@ class DiffViewer {
    * Build table header with two rows:
    * - Row 1: Column letters (with +/- prefix for added/deleted columns)
    * - Row 2: Column names
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results
    * @returns {HTMLElement} Table header element
    */
@@ -748,7 +748,7 @@ class DiffViewer {
    * Build table body with all rows (matched/added/deleted)
    * Uses interleaved sorting: deleted rows appear before next new row position
    * Applies visual styling to changed/added/deleted cells and rows
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results from DiffEngine
    * @param {string} keyColumn - Key column used for matching
    * @returns {HTMLElement} Table body element
@@ -812,16 +812,23 @@ class DiffViewer {
         const cellKey = `${rowInfo.newIndex || rowInfo.oldIndex}-${col.header}`;
         const cellDiff = cellChanges.get(cellKey);
 
+        // 🆕 Build tooltip data
+        const tooltipData = {
+          header: col.header,
+          oldCell: col.oldCol && rowInfo.oldIndex ? `${col.oldCol}${rowInfo.oldIndex}` : null,
+          newCell: col.newCol && rowInfo.newIndex ? `${col.newCol}${rowInfo.newIndex}` : null,
+        };
+
         if (cellDiff) {
           // Cell value changed
           td.className = 'cell-modified';
           td.innerHTML = `
-            <div class="cell-value-change">
-              <span class="old-value">${this.formatValue(cellDiff.oldValue)}</span>
-              <span class="value-separator">→</span>
-              <span class="new-value">${this.formatValue(cellDiff.newValue)}</span>
-            </div>
-          `;
+      <div class="cell-value-change">
+        <span class="old-value">${this.formatValue(cellDiff.oldValue)}</span>
+        <span class="value-separator">→</span>
+        <span class="new-value">${this.formatValue(cellDiff.newValue)}</span>
+      </div>
+    `;
         } else if (col.type === 'added') {
           // Column was added
           td.className = 'cell-added';
@@ -844,6 +851,9 @@ class DiffViewer {
           td.innerHTML = this.formatValue(newValue || oldValue);
         }
 
+        // 🆕 Attach tooltip on hover
+        this.attachCellTooltip(td, tooltipData);
+
         tr.appendChild(td);
       });
 
@@ -856,19 +866,19 @@ class DiffViewer {
   /**
    * getAllRows(sheetDiff, keyColumn)
    * INTERLEAVED SORTING
-   * 
+   *
    * Build complete row list with proper matching and sorting:
    * 1. Match rows by key column value
    * 2. Handle blank key columns (match by position + content)
    * 3. Sort with interleaved logic:
    *    - Matched/Added rows: Follow new file order
    *    - Deleted rows: Insert before next new row position based on old row position
-   * 
+   *
    * Sorting Algorithm:
    * - Matched/Added → sortKey = newIndex
    * - Deleted → sortKey = (next new row's old position) - 0.5
    *   This ensures deleted rows appear immediately before the new row at the same position
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results with oldData and newData
    * @param {string} keyColumn - Column letter used for matching (e.g. 'A', 'B')
    * @returns {Array<Object>} Sorted array of row objects with { key, oldRow, oldIndex, newRow, newIndex }
@@ -1064,7 +1074,7 @@ class DiffViewer {
    * areRowsIdentical(row1, row2)
    * Check if two rows have identical content across all columns
    * Used for matching blank-key rows by content
-   * 
+   *
    * @param {Object} row1 - First row data
    * @param {Object} row2 - Second row data
    * @returns {boolean} True if all cell values match
@@ -1090,7 +1100,7 @@ class DiffViewer {
    * normalizeValue(cell)
    * Normalize cell value for comparison
    * Removes invisible characters and trims whitespace
-   * 
+   *
    * @param {any} cell - Cell value
    * @returns {string} Normalized string value
    */
@@ -1109,7 +1119,7 @@ class DiffViewer {
   /**
    * buildRowChangeMap(rowChanges)
    * Build Map for quick lookup of row changes by row key
-   * 
+   *
    * @param {Array<Object>} rowChanges - Array of row changes from DiffEngine
    * @returns {Map} Map of rowKey -> change object
    */
@@ -1124,7 +1134,7 @@ class DiffViewer {
   /**
    * buildCellChangeMap(differences)
    * Build Map for quick lookup of cell changes by row-header key
-   * 
+   *
    * @param {Array<Object>} differences - Array of cell differences from DiffEngine
    * @returns {Map} Map of "rowIndex-headerName" -> diff object
    */
@@ -1141,7 +1151,7 @@ class DiffViewer {
    * formatValue(value)
    * Format cell value for display
    * Shows "Blank" for null/undefined/empty values
-   * 
+   *
    * @param {any} value - Cell value
    * @returns {string} Formatted HTML string
    */
@@ -1235,7 +1245,7 @@ class DiffViewer {
   /**
    * navigateToChange(direction)
    * Navigate to next or previous changed cell
-   * 
+   *
    * @param {string} direction - 'next' or 'prev'
    */
   navigateToChange(direction) {
@@ -1303,7 +1313,7 @@ class DiffViewer {
    * compareByRowPosition(sheetA, sheetB, headerRowA, headerRowB)
    * Compare sheets by row position (no key column matching)
    * Matches row N in file A with row N in file B
-   * 
+   *
    * @param {Array<Object>} sheetA - Data from first sheet
    * @param {Array<Object>} sheetB - Data from second sheet
    * @param {number} headerRowA - Header row number for sheet A
@@ -1395,7 +1405,7 @@ class DiffViewer {
    * renderUnifiedTableByPosition(sheetDiff, headerRowA, headerRowB)
    * Render unified table for position-based comparison
    * Similar to renderUnifiedTable but uses position-based matching
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results
    * @param {number} headerRowA - Header row number for sheet A
    * @param {number} headerRowB - Header row number for sheet B
@@ -1432,7 +1442,7 @@ class DiffViewer {
    * buildUnifiedBodyByPosition(sheetDiff, headerRowA, headerRowB)
    * Build table body for position-based comparison
    * Rows are matched by position (row 1 vs row 1, row 2 vs row 2, etc.)
-   * 
+   *
    * @param {Object} sheetDiff - Comparison results
    * @param {number} headerRowA - Header row number for sheet A
    * @param {number} headerRowB - Header row number for sheet B
@@ -1517,6 +1527,15 @@ class DiffViewer {
           td.className = 'cell-unchanged';
           td.innerHTML = this.formatValue(newValue || oldValue);
         }
+        // 🆕 Build tooltip data
+        const tooltipData = {
+          header: col.header,
+          oldCell: col.oldCol && rowExistsInA ? `${col.oldCol}${excelRowA}` : null,
+          newCell: col.newCol && rowExistsInB ? `${col.newCol}${excelRowB}` : null,
+        };
+
+        // 🆕 Attach tooltip on hover
+        this.attachCellTooltip(td, tooltipData);
 
         tr.appendChild(td);
       });
@@ -1525,6 +1544,178 @@ class DiffViewer {
     }
 
     return tbody;
+  }
+
+  /**
+   * attachCellTooltip(td, tooltipData)
+   * Attach hover/tap tooltip showing cell position info
+   * Desktop: Hover to show, auto-updates on mouse move
+   * Mobile: Tap to show, auto-closes on scroll
+   *
+   * @param {HTMLElement} td - Table cell element
+   * @param {Object} tooltipData - { header, oldCell, newCell }
+   */
+  attachCellTooltip(td, tooltipData) {
+    let tooltip = null;
+    let isMobile = 'ontouchstart' in window;
+    let scrollListener = null;
+    let outsideClickHandler = null;
+
+    // Helper: Create tooltip
+    const createTooltip = () => {
+      if (tooltip) return; // Already exists
+
+      tooltip = document.createElement('div');
+      tooltip.className = 'cell-tooltip';
+
+      // Build tooltip content
+      let content = `<div class="cell-tooltip-label">${tooltipData.header}</div>`;
+
+      if (tooltipData.oldCell) {
+        content += `<div class="cell-tooltip-row"><span>Old:</span><span>${tooltipData.oldCell}</span></div>`;
+      }
+
+      if (tooltipData.newCell) {
+        content += `<div class="cell-tooltip-row"><span>New:</span><span>${tooltipData.newCell}</span></div>`;
+      }
+
+      tooltip.innerHTML = content;
+      document.body.appendChild(tooltip);
+
+      // Position tooltip
+      positionTooltip(td);
+
+      // Only attach scroll listener on mobile
+      if (isMobile) {
+        attachScrollListener();
+      }
+    };
+
+    // Helper: Position tooltip
+    const positionTooltip = (target) => {
+      if (!tooltip) return;
+
+      const rect = target.getBoundingClientRect();
+      const scrollY = window.scrollY || window.pageYOffset;
+      const scrollX = window.scrollX || window.pageXOffset;
+
+      // Position above cell (centered)
+      tooltip.style.position = 'absolute';
+      tooltip.style.left = `${rect.left + scrollX + rect.width / 2}px`;
+      tooltip.style.top = `${rect.top + scrollY - 10}px`;
+      tooltip.style.transform = 'translate(-50%, -100%)';
+    };
+
+    // Helper: Remove tooltip
+    const removeTooltip = () => {
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = null;
+      }
+
+      // Remove scroll listener
+      removeScrollListener();
+
+      // Remove outside click handler
+      removeOutsideClickHandler();
+    };
+
+    // Helper: Attach scroll listener (mobile only)
+    const attachScrollListener = () => {
+      if (scrollListener) return; // Already attached
+
+      scrollListener = () => {
+        removeTooltip();
+      };
+
+      // Listen to both scroll and touchmove
+      window.addEventListener('scroll', scrollListener, { passive: true });
+      document.addEventListener('touchmove', scrollListener, { passive: true });
+
+      // Also check table wrapper scroll
+      const tableWrapper = td.closest('.table-wrapper');
+      if (tableWrapper) {
+        tableWrapper.addEventListener('scroll', scrollListener, { passive: true });
+      }
+    };
+
+    // Helper: Remove scroll listener
+    const removeScrollListener = () => {
+      if (!scrollListener) return;
+
+      window.removeEventListener('scroll', scrollListener);
+      document.removeEventListener('touchmove', scrollListener);
+
+      const tableWrapper = td.closest('.table-wrapper');
+      if (tableWrapper) {
+        tableWrapper.removeEventListener('scroll', scrollListener);
+      }
+
+      scrollListener = null;
+    };
+
+    // Helper: Attach outside click handler (mobile only)
+    const attachOutsideClickHandler = () => {
+      if (outsideClickHandler) return; // Already attached
+
+      outsideClickHandler = (e) => {
+        // Check if click is outside both tooltip and cell
+        if (tooltip && !td.contains(e.target) && !tooltip.contains(e.target)) {
+          removeTooltip();
+        }
+      };
+
+      // Delay to avoid immediate trigger
+      setTimeout(() => {
+        document.addEventListener('click', outsideClickHandler, { capture: true });
+      }, 100);
+    };
+
+    // Helper: Remove outside click handler
+    const removeOutsideClickHandler = () => {
+      if (!outsideClickHandler) return;
+
+      document.removeEventListener('click', outsideClickHandler, { capture: true });
+      outsideClickHandler = null;
+    };
+
+    // ========================================
+    // Event Handlers
+    // ========================================
+
+    if (isMobile) {
+      // ========== MOBILE: Tap to toggle tooltip ==========
+      td.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent event bubbling
+
+        if (tooltip) {
+          // Tooltip already visible: Hide it
+          removeTooltip();
+        } else {
+          // Remove any other visible tooltips first
+          document.querySelectorAll('.cell-tooltip').forEach((t) => t.remove());
+
+          // Show tooltip for this cell
+          createTooltip();
+
+          // Attach outside click handler
+          attachOutsideClickHandler();
+        }
+      });
+    } else {
+      // ========== DESKTOP: Hover to show tooltip ==========
+      td.addEventListener('mouseenter', () => {
+        createTooltip();
+      });
+
+      td.addEventListener('mousemove', () => {
+        positionTooltip(td);
+      });
+
+      td.addEventListener('mouseleave', () => {
+        removeTooltip();
+      });
+    }
   }
 }
 

@@ -1,19 +1,40 @@
 /**
  * diffViewer.js
- * ✅ FINAL CORRECTED VERSION
+ * Excel Diff Viewer with Interleaved Row Sorting
+ * 
+ * Responsibilities:
+ * - Render unified diff table with side-by-side comparison
+ * - Handle user interactions (sheet selection, key column selection, navigation)
+ * - Support both key-based matching and position-based matching
+ * - Display row changes (added/deleted/matched) with proper visual styling
+ * - Implement interleaved sorting: deleted rows inserted before next new row position
  */
 
 import DiffEngine from './diffEngine.js';
 
+/**
+ * DiffViewer Class
+ * Main UI controller for rendering Excel comparison results
+ * Handles table generation, change navigation, and user interactions
+ */
 class DiffViewer {
   constructor() {
-    this.dataA = null;
-    this.dataB = null;
-    this.diffResults = null;
-    this.changedCells = [];
-    this.currentChangeIndex = -1;
+    this.dataA = null;           // Parsed data from first Excel file
+    this.dataB = null;           // Parsed data from second Excel file
+    this.diffResults = null;     // Comparison results from DiffEngine
+    this.changedCells = [];      // Array of all changed cells for navigation
+    this.currentChangeIndex = -1; // Current position in change navigation
   }
 
+  /**
+   * init(dataA, dataB, diffResults)
+   * Initialize the diff viewer with parsed Excel data and comparison results
+   * Sets up dropdowns, auto-selects sheets, and prepares UI for comparison
+   * 
+   * @param {Object} dataA - Parsed data from first Excel file
+   * @param {Object} dataB - Parsed data from second Excel file
+   * @param {Object} diffResults - Comparison results from DiffEngine
+   */
   init(dataA, dataB, diffResults) {
     this.dataA = dataA;
     this.dataB = dataB;
@@ -21,8 +42,10 @@ class DiffViewer {
 
     console.log('🔧 Initializing DiffViewer...');
 
+    // Populate sheet selection dropdowns
     this.populateSheetDropdowns();
 
+    // Auto-select first sheet in both files
     const sheetSelectA = document.getElementById('sheetSelectA');
     const sheetSelectB = document.getElementById('sheetSelectB');
 
@@ -36,14 +59,22 @@ class DiffViewer {
       console.log(`✅ Auto-selected Sheet B: ${this.dataB.sheetNames[0]}`);
     }
 
+    // Populate header row and key column dropdowns
     this.populateHeaderRowDropdowns();
     this.populateKeyColumnDropdown();
+    
+    // Setup event listeners
     this.setupSheetChangeListeners();
     this.setupChangeNavigation();
 
     console.log('✅ DiffViewer initialized');
   }
 
+  /**
+   * populateHeaderRowDropdowns()
+   * Populate header row selection dropdowns for both files
+   * Allows user to specify which row contains column headers (default: row 1)
+   */
   populateHeaderRowDropdowns() {
     const sheetSelectA = document.getElementById('sheetSelectA');
     const sheetSelectB = document.getElementById('sheetSelectB');
@@ -61,6 +92,7 @@ class DiffViewer {
     const rowCountA = this.dataA?.sheets[selectedSheetA]?.rowCount || 50;
     const rowCountB = this.dataB?.sheets[selectedSheetB]?.rowCount || 50;
 
+    // Populate dropdown A (max 50 rows)
     headerRowA.innerHTML = '';
     const maxRowsA = Math.min(rowCountA, 50);
     for (let i = 1; i <= maxRowsA; i++) {
@@ -70,6 +102,7 @@ class DiffViewer {
       headerRowA.appendChild(option);
     }
 
+    // Populate dropdown B (max 50 rows)
     headerRowB.innerHTML = '';
     const maxRowsB = Math.min(rowCountB, 50);
     for (let i = 1; i <= maxRowsB; i++) {
@@ -79,10 +112,17 @@ class DiffViewer {
       headerRowB.appendChild(option);
     }
 
+    // Default to row 1
     headerRowA.value = '1';
     headerRowB.value = '1';
   }
 
+  /**
+   * populateKeyColumnDropdown()
+   * Populate key column selection dropdown with common columns from both sheets
+   * Auto-selects columns named "email", "code", or "id" if available
+   * Includes "(Use Row Position)" option for position-based matching
+   */
   populateKeyColumnDropdown() {
     const keyColumnSelect = document.getElementById('keyColumnSelect');
     const sheetSelectA = document.getElementById('sheetSelectA');
@@ -118,11 +158,14 @@ class DiffViewer {
       return;
     }
 
+    // Extract headers from both sheets
     const headersA = sheetA[headerIndexA] ? Object.values(sheetA[headerIndexA]).filter((h) => h && String(h).trim()) : [];
     const headersB = sheetB[headerIndexB] ? Object.values(sheetB[headerIndexB]).filter((h) => h && String(h).trim()) : [];
 
+    // Find common columns between both sheets
     const commonColumns = this.findCommonColumns(headersA, headersB);
 
+    // Build dropdown options
     keyColumnSelect.innerHTML = '';
 
     const defaultOption = document.createElement('option');
@@ -140,11 +183,13 @@ class DiffViewer {
     separator.textContent = '────────────────────────';
     keyColumnSelect.appendChild(separator);
 
+    // If no common columns, default to row position matching
     if (commonColumns.length === 0) {
       keyColumnSelect.value = '__ROW_POSITION__';
     } else {
       let autoSelected = false;
 
+      // Add common columns to dropdown
       commonColumns.forEach((col) => {
         if (!col.name) return;
 
@@ -152,6 +197,7 @@ class DiffViewer {
         option.value = col.colIndex;
         option.textContent = col.name;
 
+        // Auto-select columns named "email", "code", or "id"
         const lowerName = col.name.toLowerCase();
         if (!autoSelected && (lowerName.includes('email') || lowerName.includes('code') || lowerName.includes('id'))) {
           option.selected = true;
@@ -161,12 +207,22 @@ class DiffViewer {
         keyColumnSelect.appendChild(option);
       });
 
+      // If no auto-selection, default to first common column
       if (!autoSelected && commonColumns.length > 0) {
         keyColumnSelect.value = commonColumns[0].colIndex;
       }
     }
   }
 
+  /**
+   * findCommonColumns(headersA, headersB)
+   * Find columns that exist in both sheets with matching names (case-insensitive)
+   * Returns array of common columns with their names and column letters
+   * 
+   * @param {Array<string>} headersA - Headers from first sheet
+   * @param {Array<string>} headersB - Headers from second sheet
+   * @returns {Array<Object>} Array of common columns with { name, colIndex, indexA, indexB }
+   */
   findCommonColumns(headersA, headersB) {
     const commonColumns = [];
 
@@ -184,6 +240,7 @@ class DiffViewer {
 
         const normalizedB = trimmedB.toLowerCase();
 
+        // Case-insensitive match
         if (normalizedA === normalizedB) {
           const alreadyExists = commonColumns.some((col) => col.name === trimmedA);
 
@@ -202,6 +259,13 @@ class DiffViewer {
     return commonColumns;
   }
 
+  /**
+   * getColumnLetter(index)
+   * Convert column index (0-based) to Excel column letter (A, B, C, ..., Z, AA, AB, ...)
+   * 
+   * @param {number} index - Zero-based column index
+   * @returns {string} Excel column letter
+   */
   getColumnLetter(index) {
     let letter = '';
     while (index >= 0) {
@@ -211,6 +275,11 @@ class DiffViewer {
     return letter;
   }
 
+  /**
+   * setupSheetChangeListeners()
+   * Setup event listeners for sheet and header row selection changes
+   * Updates key column dropdown when selections change
+   */
   setupSheetChangeListeners() {
     const sheetSelectA = document.getElementById('sheetSelectA');
     const sheetSelectB = document.getElementById('sheetSelectB');
@@ -244,6 +313,13 @@ class DiffViewer {
     }
   }
 
+  /**
+   * updateHeaderRowDropdown(type)
+   * Update header row dropdown when sheet selection changes
+   * Rebuilds dropdown options based on selected sheet's row count
+   * 
+   * @param {string} type - 'A' or 'B' to specify which file
+   */
   updateHeaderRowDropdown(type) {
     const sheetSelect = document.getElementById(`sheetSelect${type}`);
     const headerRowSelect = document.getElementById(`headerRow${type}`);
@@ -266,6 +342,13 @@ class DiffViewer {
     headerRowSelect.value = '1';
   }
 
+  /**
+   * findMatchingSheet()
+   * Find sheets with matching names between both files
+   * Used for auto-selection if sheet names match
+   * 
+   * @returns {Object|null} { sheetA, sheetB } or null if no match found
+   */
   findMatchingSheet() {
     if (!this.dataA.sheetNames || !this.dataB.sheetNames) return null;
 
@@ -278,6 +361,11 @@ class DiffViewer {
     return null;
   }
 
+  /**
+   * populateSheetDropdowns()
+   * Populate sheet selection dropdowns for both files
+   * Shows all available sheets from both Excel files
+   */
   populateSheetDropdowns() {
     const sheetSelectA = document.getElementById('sheetSelectA');
     const sheetSelectB = document.getElementById('sheetSelectB');
@@ -309,6 +397,12 @@ class DiffViewer {
     }
   }
 
+  /**
+   * compareSelectedSheets()
+   * Compare currently selected sheets with specified header rows and key column
+   * Triggers either key-based matching or position-based matching
+   * Called when user clicks "Compare" button
+   */
   compareSelectedSheets() {
     const sheetSelectA = document.getElementById('sheetSelectA');
     const sheetSelectB = document.getElementById('sheetSelectB');
@@ -340,6 +434,7 @@ class DiffViewer {
     let sheetA = this.dataA.sheets[selectedSheetA]?.data || [];
     let sheetB = this.dataB.sheets[selectedSheetB]?.data || [];
 
+    // Adjust data based on header row selection
     sheetA = this.adjustDataForHeaderRow(sheetA, selectedHeaderA);
     sheetB = this.adjustDataForHeaderRow(sheetB, selectedHeaderB);
 
@@ -349,9 +444,11 @@ class DiffViewer {
     }
 
     if (selectedKeyColumn === '__ROW_POSITION__') {
+      // Position-based matching
       console.log('🔢 Using row position matching');
       this.compareByRowPosition(sheetA, sheetB, selectedHeaderA, selectedHeaderB);
     } else {
+      // Key-based matching
       console.log(`🔑 Using key column: ${selectedKeyColumn}`);
 
       const diffEngine = new DiffEngine();
@@ -365,6 +462,15 @@ class DiffViewer {
     }
   }
 
+  /**
+   * adjustDataForHeaderRow(data, headerRow)
+   * Slice data array to start from the specified header row
+   * Ensures header row is treated as row 0 in the returned array
+   * 
+   * @param {Array<Object>} data - Sheet data
+   * @param {number} headerRow - Header row number (1-based)
+   * @returns {Array<Object>} Adjusted data starting from header row
+   */
   adjustDataForHeaderRow(data, headerRow) {
     if (!data || data.length === 0) return data;
 
@@ -378,6 +484,15 @@ class DiffViewer {
     return data.slice(headerIndex);
   }
 
+  /**
+   * renderUnifiedTable(sheetDiff, keyColumn)
+   * Render unified diff table showing side-by-side comparison
+   * Displays added/deleted/modified rows with visual highlighting
+   * Uses interleaved sorting: deleted rows inserted before next new row position
+   * 
+   * @param {Object} sheetDiff - Comparison results from DiffEngine
+   * @param {string} keyColumn - Key column used for matching
+   */
   renderUnifiedTable(sheetDiff, keyColumn = 'A') {
     const container = document.getElementById('unifiedTableContainer');
     if (!container) {
@@ -406,6 +521,11 @@ class DiffViewer {
     this.setupCellClickNavigation();
   }
 
+  /**
+   * setupCellClickNavigation()
+   * Setup click listeners on changed cells for navigation
+   * Allows user to click on changed cells to navigate to them
+   */
   setupCellClickNavigation() {
     const table = document.querySelector('#unifiedTableContainer .diff-table');
     if (!table) return;
@@ -436,6 +556,15 @@ class DiffViewer {
     });
   }
 
+  /**
+   * getUnifiedColumns(sheetDiff)
+   * Build unified column list merging columns from both sheets
+   * Handles added/deleted columns and blank columns
+   * Returns columns in new file's order, with deleted columns appended at end
+   * 
+   * @param {Object} sheetDiff - Comparison results
+   * @returns {Array<Object>} Array of unified columns with { header, oldCol, newCol, type }
+   */
   getUnifiedColumns(sheetDiff) {
     const oldHeaders = sheetDiff.oldData[0] || {};
     const newHeaders = sheetDiff.newData[0] || {};
@@ -448,6 +577,7 @@ class DiffViewer {
         .toLowerCase();
     };
 
+    // Process old file headers
     Object.keys(oldHeaders).forEach((col) => {
       const content = String(oldHeaders[col] || '').trim();
 
@@ -470,6 +600,7 @@ class DiffViewer {
       }
     });
 
+    // Process new file headers
     Object.keys(newHeaders).forEach((col) => {
       const content = String(newHeaders[col] || '').trim();
 
@@ -510,6 +641,7 @@ class DiffViewer {
     const result = [];
     const processedHeaders = new Set();
 
+    // First pass: Add columns in new file's order
     Object.keys(newHeaders).forEach((newCol) => {
       for (let [normalized, mapping] of headerMap) {
         if (mapping.newCol === newCol && !processedHeaders.has(normalized)) {
@@ -528,6 +660,7 @@ class DiffViewer {
       }
     });
 
+    // Second pass: Add deleted columns (only in old file)
     for (let [normalized, mapping] of headerMap) {
       if (!processedHeaders.has(normalized)) {
         const displayName = mapping.originalA || mapping.originalB || '(Blank Column)';
@@ -544,10 +677,20 @@ class DiffViewer {
     return result;
   }
 
+  /**
+   * buildUnifiedHeader(sheetDiff)
+   * Build table header with two rows:
+   * - Row 1: Column letters (with +/- prefix for added/deleted columns)
+   * - Row 2: Column names
+   * 
+   * @param {Object} sheetDiff - Comparison results
+   * @returns {HTMLElement} Table header element
+   */
   buildUnifiedHeader(sheetDiff) {
     const thead = document.createElement('thead');
     const unifiedColumns = this.getUnifiedColumns(sheetDiff);
 
+    // Row 1: Index columns + Column letters
     const tr1 = document.createElement('tr');
 
     const th1Old = document.createElement('th');
@@ -579,6 +722,7 @@ class DiffViewer {
       tr1.appendChild(th);
     });
 
+    // Row 2: Column names
     const tr2 = document.createElement('tr');
 
     unifiedColumns.forEach((col) => {
@@ -599,13 +743,17 @@ class DiffViewer {
     return thead;
   }
 
- /**
- * buildUnifiedBody() - ✅ 用 originalKey 版
- */
-/**
- * buildUnifiedBody() - ✅ 最終修正版 (v5)
- */
-buildUnifiedBody(sheetDiff, keyColumn = 'A') {
+  /**
+   * buildUnifiedBody(sheetDiff, keyColumn)
+   * Build table body with all rows (matched/added/deleted)
+   * Uses interleaved sorting: deleted rows appear before next new row position
+   * Applies visual styling to changed/added/deleted cells and rows
+   * 
+   * @param {Object} sheetDiff - Comparison results from DiffEngine
+   * @param {string} keyColumn - Key column used for matching
+   * @returns {HTMLElement} Table body element
+   */
+  buildUnifiedBody(sheetDiff, keyColumn = 'A') {
     const tbody = document.createElement('tbody');
     const allRows = this.getAllRows(sheetDiff, keyColumn);
     const unifiedColumns = this.getUnifiedColumns(sheetDiff);
@@ -614,194 +762,219 @@ buildUnifiedBody(sheetDiff, keyColumn = 'A') {
 
     console.log('🔍 Row Changes Map:');
     rowChanges.forEach((change, key) => {
-        console.log(`   Key: "${key}" → Type: ${change.type}`);
+      console.log(`   Key: "${key}" → Type: ${change.type}`);
     });
 
     allRows.forEach((rowInfo) => {
-        const tr = document.createElement('tr');
+      const tr = document.createElement('tr');
 
-        console.log(`🔑 Processing row: key="${rowInfo.key}", originalKey="${rowInfo.originalKey}", oldIndex=${rowInfo.oldIndex}, newIndex=${rowInfo.newIndex}`);
+      console.log(`🔑 Processing row: key="${rowInfo.key}", originalKey="${rowInfo.originalKey}", oldIndex=${rowInfo.oldIndex}, newIndex=${rowInfo.newIndex}`);
 
-        // ✅ 方法 1: 直接用 oldIndex/newIndex 判斷
-        let rowType = null;
-        
-        if (rowInfo.oldIndex !== null && rowInfo.newIndex !== null) {
-            rowType = 'matched';
-        } else if (rowInfo.oldIndex !== null && rowInfo.newIndex === null) {
-            rowType = 'deleted';
-        } else if (rowInfo.oldIndex === null && rowInfo.newIndex !== null) {
-            rowType = 'added';
-        }
+      // Determine row type by presence of old/new index
+      let rowType = null;
 
-        console.log(`   ✅ Row type: ${rowType}`);
+      if (rowInfo.oldIndex !== null && rowInfo.newIndex !== null) {
+        rowType = 'matched';
+      } else if (rowInfo.oldIndex !== null && rowInfo.newIndex === null) {
+        rowType = 'deleted';
+      } else if (rowInfo.oldIndex === null && rowInfo.newIndex !== null) {
+        rowType = 'added';
+      }
 
-        // Apply row-level styling
-        if (rowType === 'added') {
-            tr.className = 'row-added';
+      console.log(`   ✅ Row type: ${rowType}`);
+
+      // Apply row-level styling
+      if (rowType === 'added') {
+        tr.className = 'row-added';
+      } else if (rowType === 'deleted') {
+        tr.className = 'row-deleted';
+      }
+
+      // Old Index column
+      const tdOldIdx = document.createElement('td');
+      tdOldIdx.className = 'index-cell old-idx';
+      tdOldIdx.textContent = rowInfo.oldIndex !== null ? rowInfo.oldIndex : '-';
+      tr.appendChild(tdOldIdx);
+
+      // New Index column
+      const tdNewIdx = document.createElement('td');
+      tdNewIdx.className = 'index-cell new-idx';
+      tdNewIdx.textContent = rowInfo.newIndex !== null ? rowInfo.newIndex : '-';
+      tr.appendChild(tdNewIdx);
+
+      // Render data cells
+      unifiedColumns.forEach((col) => {
+        const td = document.createElement('td');
+
+        const oldValue = col.oldCol ? rowInfo.oldRow?.[col.oldCol] : null;
+        const newValue = col.newCol ? rowInfo.newRow?.[col.newCol] : null;
+
+        const cellKey = `${rowInfo.newIndex || rowInfo.oldIndex}-${col.header}`;
+        const cellDiff = cellChanges.get(cellKey);
+
+        if (cellDiff) {
+          // Cell value changed
+          td.className = 'cell-modified';
+          td.innerHTML = `
+            <div class="cell-value-change">
+              <span class="old-value">${this.formatValue(cellDiff.oldValue)}</span>
+              <span class="value-separator">→</span>
+              <span class="new-value">${this.formatValue(cellDiff.newValue)}</span>
+            </div>
+          `;
+        } else if (col.type === 'added') {
+          // Column was added
+          td.className = 'cell-added';
+          td.innerHTML = this.formatValue(newValue);
+        } else if (col.type === 'deleted') {
+          // Column was deleted
+          td.className = 'cell-deleted';
+          td.innerHTML = this.formatValue(oldValue);
         } else if (rowType === 'deleted') {
-            tr.className = 'row-deleted';
+          // Row was deleted
+          td.className = 'cell-deleted';
+          td.innerHTML = this.formatValue(oldValue);
+        } else if (rowType === 'added') {
+          // Row was added
+          td.className = 'cell-added';
+          td.innerHTML = this.formatValue(newValue);
+        } else {
+          // Cell unchanged
+          td.className = 'cell-unchanged';
+          td.innerHTML = this.formatValue(newValue || oldValue);
         }
 
-        // Old Index
-        const tdOldIdx = document.createElement('td');
-        tdOldIdx.className = 'index-cell old-idx';
-        tdOldIdx.textContent = rowInfo.oldIndex !== null ? rowInfo.oldIndex : '-';
-        tr.appendChild(tdOldIdx);
+        tr.appendChild(td);
+      });
 
-        // New Index
-        const tdNewIdx = document.createElement('td');
-        tdNewIdx.className = 'index-cell new-idx';
-        tdNewIdx.textContent = rowInfo.newIndex !== null ? rowInfo.newIndex : '-';
-        tr.appendChild(tdNewIdx);
-
-        // Render cells
-        unifiedColumns.forEach((col) => {
-            const td = document.createElement('td');
-
-            const oldValue = col.oldCol ? rowInfo.oldRow?.[col.oldCol] : null;
-            const newValue = col.newCol ? rowInfo.newRow?.[col.newCol] : null;
-
-            const cellKey = `${rowInfo.newIndex || rowInfo.oldIndex}-${col.header}`;
-            const cellDiff = cellChanges.get(cellKey);
-
-            if (cellDiff) {
-                // Cell was modified
-                td.className = 'cell-modified';
-                td.innerHTML = `
-                    <div class="cell-value-change">
-                        <span class="old-value">${this.formatValue(cellDiff.oldValue)}</span>
-                        <span class="value-separator">→</span>
-                        <span class="new-value">${this.formatValue(cellDiff.newValue)}</span>
-                    </div>
-                `;
-            } else if (col.type === 'added') {
-                // Column was added
-                td.className = 'cell-added';
-                td.innerHTML = this.formatValue(newValue);
-            } else if (col.type === 'deleted') {
-                // Column was deleted
-                td.className = 'cell-deleted';
-                td.innerHTML = this.formatValue(oldValue);
-            } else if (rowType === 'deleted') {
-                // Row was deleted
-                td.className = 'cell-deleted';
-                td.innerHTML = this.formatValue(oldValue);
-            } else if (rowType === 'added') {
-                // Row was added
-                td.className = 'cell-added';
-                td.innerHTML = this.formatValue(newValue);
-            } else {
-                // Cell unchanged
-                td.className = 'cell-unchanged';
-                td.innerHTML = this.formatValue(newValue || oldValue);
-            }
-
-            tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
+      tbody.appendChild(tr);
     });
 
     return tbody;
-}
+  }
 
   /**
-   * getAllRows() - ✅ 最終修正版
+   * getAllRows(sheetDiff, keyColumn)
+   * INTERLEAVED SORTING
+   * 
+   * Build complete row list with proper matching and sorting:
+   * 1. Match rows by key column value
+   * 2. Handle blank key columns (match by position + content)
+   * 3. Sort with interleaved logic:
+   *    - Matched/Added rows: Follow new file order
+   *    - Deleted rows: Insert before next new row position based on old row position
+   * 
+   * Sorting Algorithm:
+   * - Matched/Added → sortKey = newIndex
+   * - Deleted → sortKey = (next new row's old position) - 0.5
+   *   This ensures deleted rows appear immediately before the new row at the same position
+   * 
+   * @param {Object} sheetDiff - Comparison results with oldData and newData
+   * @param {string} keyColumn - Column letter used for matching (e.g. 'A', 'B')
+   * @returns {Array<Object>} Sorted array of row objects with { key, oldRow, oldIndex, newRow, newIndex }
    */
-/**
- * getAllRows() - ✅ Interleaved Sorting (v6 - FINAL)
- */
-getAllRows(sheetDiff, keyColumn = 'A') {
+  getAllRows(sheetDiff, keyColumn = 'A') {
     const rowMap = new Map();
     const headerRowA = sheetDiff.headerRowA || 1;
     const headerRowB = sheetDiff.headerRowB || 1;
 
-    const oldDataRows = sheetDiff.oldData.slice(1);
-    const newDataRows = sheetDiff.newData.slice(1);
+    const oldDataRows = sheetDiff.oldData.slice(1); // Exclude header row
+    const newDataRows = sheetDiff.newData.slice(1); // Exclude header row
 
-    // Process Old File
+    // ====================================
+    // Phase 1: Process Old File Rows
+    // ====================================
     oldDataRows.forEach((row, index) => {
-        const keyValue = String(row[keyColumn] || '').trim();
-        const excelRowNumber = headerRowA + 1 + index;
+      const keyValue = String(row[keyColumn] || '').trim();
+      const excelRowNumber = headerRowA + 1 + index; // Convert to Excel row number
 
-        if (keyValue) {
-            rowMap.set(keyValue, {
-                key: keyValue,
-                originalKey: keyValue,
-                oldRow: row,
-                oldIndex: excelRowNumber,
-                newRow: null,
-                newIndex: null,
-            });
-        } else {
-            const uniqueKey = `__blank_old_${excelRowNumber}`;
-            rowMap.set(uniqueKey, {
-                key: `(empty)`,
-                originalKey: null,
-                oldRow: row,
-                oldIndex: excelRowNumber,
-                newRow: null,
-                newIndex: null,
-                isBlankKey: true,
-            });
-        }
+      if (keyValue) {
+        // Non-blank key: Use key value as map key
+        rowMap.set(keyValue, {
+          key: keyValue,
+          originalKey: keyValue,
+          oldRow: row,
+          oldIndex: excelRowNumber,
+          newRow: null,
+          newIndex: null,
+        });
+      } else {
+        // Blank key: Use position-based unique key
+        const uniqueKey = `__blank_old_${excelRowNumber}`;
+        rowMap.set(uniqueKey, {
+          key: `(empty)`,
+          originalKey: null,
+          oldRow: row,
+          oldIndex: excelRowNumber,
+          newRow: null,
+          newIndex: null,
+          isBlankKey: true,
+        });
+      }
     });
 
-    // Process New File
+    // ====================================
+    // Phase 2: Process New File Rows
+    // ====================================
     newDataRows.forEach((row, index) => {
-        const keyValue = String(row[keyColumn] || '').trim();
-        const excelRowNumber = headerRowB + 1 + index;
+      const keyValue = String(row[keyColumn] || '').trim();
+      const excelRowNumber = headerRowB + 1 + index;
 
-        if (keyValue) {
-            if (rowMap.has(keyValue)) {
-                const existing = rowMap.get(keyValue);
-                existing.newRow = row;
-                existing.newIndex = excelRowNumber;
-            } else {
-                rowMap.set(keyValue, {
-                    key: keyValue,
-                    originalKey: keyValue,
-                    oldRow: null,
-                    oldIndex: null,
-                    newRow: row,
-                    newIndex: excelRowNumber,
-                });
-            }
+      if (keyValue) {
+        // Non-blank key: Match with existing row or create new
+        if (rowMap.has(keyValue)) {
+          const existing = rowMap.get(keyValue);
+          existing.newRow = row;
+          existing.newIndex = excelRowNumber;
         } else {
-            const positionKey = `__blank_old_${excelRowNumber}`;
-
-            if (rowMap.has(positionKey)) {
-                const existing = rowMap.get(positionKey);
-                const allColumnsMatch = this.areRowsIdentical(existing.oldRow, row);
-
-                if (allColumnsMatch) {
-                    existing.newRow = row;
-                    existing.newIndex = excelRowNumber;
-                } else {
-                    const newKey = `__blank_new_${excelRowNumber}`;
-                    rowMap.set(newKey, {
-                        key: `(empty)`,
-                        originalKey: null,
-                        oldRow: null,
-                        oldIndex: null,
-                        newRow: row,
-                        newIndex: excelRowNumber,
-                        isBlankKey: true,
-                    });
-                }
-            } else {
-                const newKey = `__blank_new_${excelRowNumber}`;
-                rowMap.set(newKey, {
-                    key: `(empty)`,
-                    originalKey: null,
-                    oldRow: null,
-                    oldIndex: null,
-                    newRow: row,
-                    newIndex: excelRowNumber,
-                    isBlankKey: true,
-                });
-            }
+          rowMap.set(keyValue, {
+            key: keyValue,
+            originalKey: keyValue,
+            oldRow: null,
+            oldIndex: null,
+            newRow: row,
+            newIndex: excelRowNumber,
+          });
         }
+      } else {
+        // Blank key: Try to match by position + content
+        const positionKey = `__blank_old_${excelRowNumber}`;
+
+        if (rowMap.has(positionKey)) {
+          const existing = rowMap.get(positionKey);
+          const allColumnsMatch = this.areRowsIdentical(existing.oldRow, row);
+
+          if (allColumnsMatch) {
+            // Content matches: Treat as matched row
+            existing.newRow = row;
+            existing.newIndex = excelRowNumber;
+          } else {
+            // Content differs: Treat as separate added row
+            const newKey = `__blank_new_${excelRowNumber}`;
+            rowMap.set(newKey, {
+              key: `(empty)`,
+              originalKey: null,
+              oldRow: null,
+              oldIndex: null,
+              newRow: row,
+              newIndex: excelRowNumber,
+              isBlankKey: true,
+            });
+          }
+        } else {
+          // No matching position in old file: Treat as added row
+          const newKey = `__blank_new_${excelRowNumber}`;
+          rowMap.set(newKey, {
+            key: `(empty)`,
+            originalKey: null,
+            oldRow: null,
+            oldIndex: null,
+            newRow: row,
+            newIndex: excelRowNumber,
+            isBlankKey: true,
+          });
+        }
+      }
     });
 
     const rows = Array.from(rowMap.values());
@@ -811,85 +984,91 @@ getAllRows(sheetDiff, keyColumn = 'A') {
     console.log('📊 Added rows:', rows.filter((r) => !r.oldIndex && r.newIndex).length);
     console.log('📊 Matched rows:', rows.filter((r) => r.oldIndex && r.newIndex).length);
 
-    // ✅ FINAL: Interleaved Sorting (v7 - 真·最終版)
-rows.sort((a, b) => {
-    const getType = (row) => {
+    // ====================================
+    // Phase 3: Interleaved Sorting
+    // ====================================
+    rows.sort((a, b) => {
+      const getType = (row) => {
         if (row.oldIndex !== null && row.newIndex !== null) return 'matched';
         if (row.oldIndex === null && row.newIndex !== null) return 'added';
         if (row.oldIndex !== null && row.newIndex === null) return 'deleted';
         return 'unknown';
-    };
+      };
 
-    const typeA = getType(a);
-    const typeB = getType(b);
+      const typeA = getType(a);
+      const typeB = getType(b);
 
-    // ✅ Step 1: Group deleted rows by their position relative to new file
-    const getDisplayPosition = (row, type) => {
+      // Calculate display position for sorting
+      const getDisplayPosition = (row, type) => {
         if (type === 'matched' || type === 'added') {
-            // Matched/Added: Use newIndex directly
-            return row.newIndex * 1000; // Scale up to leave room for deleted rows
+          // Matched/Added: Use newIndex directly (scaled up)
+          return row.newIndex * 1000;
         } else if (type === 'deleted') {
-            // Deleted: Find the next new index after this old index
-            // Insert deleted rows BEFORE the next new row
-            
-            // Find all matched/added rows
-            const newIndexes = rows
-                .filter(r => r.newIndex !== null)
-                .map(r => r.newIndex)
-                .sort((x, y) => x - y);
-            
-            // Find the next new index that comes after this deleted row's old position
-            const nextNewIndex = newIndexes.find(idx => {
-                // Find which old row this new index corresponds to
-                const matchedRow = rows.find(r => r.newIndex === idx && r.oldIndex !== null);
-                if (matchedRow && matchedRow.oldIndex > row.oldIndex) {
-                    return true;
-                }
-                return false;
-            });
-            
-            if (nextNewIndex !== undefined) {
-                // Insert before the next new row
-                return nextNewIndex * 1000 - 500 + (row.oldIndex % 1000);
-            } else {
-                // No next new row, append at the end
-                return (Math.max(...newIndexes, 0) + 1) * 1000 + row.oldIndex;
+          // Deleted: Find next new row after this old position
+          const newIndexes = rows
+            .filter((r) => r.newIndex !== null)
+            .map((r) => r.newIndex)
+            .sort((x, y) => x - y);
+
+          // Find next new row whose old position is after this deleted row
+          const nextNewIndex = newIndexes.find((idx) => {
+            const matchedRow = rows.find((r) => r.newIndex === idx && r.oldIndex !== null);
+            if (matchedRow && matchedRow.oldIndex > row.oldIndex) {
+              return true;
             }
+            return false;
+          });
+
+          if (nextNewIndex !== undefined) {
+            // Insert before next new row
+            return nextNewIndex * 1000 - 500 + (row.oldIndex % 1000);
+          } else {
+            // No next new row: Append at end
+            return (Math.max(...newIndexes, 0) + 1) * 1000 + row.oldIndex;
+          }
         }
         return Infinity;
-    };
+      };
 
-    const posA = getDisplayPosition(a, typeA);
-    const posB = getDisplayPosition(b, typeB);
+      const posA = getDisplayPosition(a, typeA);
+      const posB = getDisplayPosition(b, typeB);
 
-    if (posA !== posB) {
+      if (posA !== posB) {
         return posA - posB;
-    }
+      }
 
-    // TIE-BREAKER
-    const typePriority = {
+      // Tie-breaker: deleted first, then matched, then added
+      const typePriority = {
         deleted: 0,
         matched: 1,
         added: 2,
         unknown: 3,
-    };
+      };
 
-    return typePriority[typeA] - typePriority[typeB];
-});
+      return typePriority[typeA] - typePriority[typeB];
+    });
 
     console.log('✅ Rows sorted with interleaved deleted rows');
-    
+
     // Debug: Show final order
     console.log('🔍 Final row order:');
     rows.forEach((row, idx) => {
-        const type = row.oldIndex && row.newIndex ? 'matched' : 
-                     !row.oldIndex && row.newIndex ? 'added' : 'deleted';
-        console.log(`  ${idx + 1}. [${type}] Key=${row.key}, Old=${row.oldIndex}, New=${row.newIndex}`);
+      const type = row.oldIndex && row.newIndex ? 'matched' : !row.oldIndex && row.newIndex ? 'added' : 'deleted';
+      console.log(`  ${idx + 1}. [${type}] Key=${row.key}, Old=${row.oldIndex}, New=${row.newIndex}`);
     });
 
     return rows;
-}
+  }
 
+  /**
+   * areRowsIdentical(row1, row2)
+   * Check if two rows have identical content across all columns
+   * Used for matching blank-key rows by content
+   * 
+   * @param {Object} row1 - First row data
+   * @param {Object} row2 - Second row data
+   * @returns {boolean} True if all cell values match
+   */
   areRowsIdentical(row1, row2) {
     if (!row1 || !row2) return false;
 
@@ -907,26 +1086,48 @@ rows.sort((a, b) => {
     return true;
   }
 
+  /**
+   * normalizeValue(cell)
+   * Normalize cell value for comparison
+   * Removes invisible characters and trims whitespace
+   * 
+   * @param {any} cell - Cell value
+   * @returns {string} Normalized string value
+   */
   normalizeValue(cell) {
     if (cell === null || cell === undefined) {
       return '';
     }
 
     let value = String(cell);
-    value = value.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    value = value.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width chars
     value = value.trim();
 
     return value;
   }
 
+  /**
+   * buildRowChangeMap(rowChanges)
+   * Build Map for quick lookup of row changes by row key
+   * 
+   * @param {Array<Object>} rowChanges - Array of row changes from DiffEngine
+   * @returns {Map} Map of rowKey -> change object
+   */
   buildRowChangeMap(rowChanges) {
     const map = new Map();
     rowChanges.forEach((change) => {
-      map.set(change.rowKey, change); // ✅ rowKey 應該係 ID value
+      map.set(change.rowKey, change);
     });
     return map;
   }
 
+  /**
+   * buildCellChangeMap(differences)
+   * Build Map for quick lookup of cell changes by row-header key
+   * 
+   * @param {Array<Object>} differences - Array of cell differences from DiffEngine
+   * @returns {Map} Map of "rowIndex-headerName" -> diff object
+   */
   buildCellChangeMap(differences) {
     const map = new Map();
     differences.forEach((diff) => {
@@ -936,6 +1137,14 @@ rows.sort((a, b) => {
     return map;
   }
 
+  /**
+   * formatValue(value)
+   * Format cell value for display
+   * Shows "Blank" for null/undefined/empty values
+   * 
+   * @param {any} value - Cell value
+   * @returns {string} Formatted HTML string
+   */
   formatValue(value) {
     if (value === null || value === undefined || value === '') {
       return '<em class="empty-cell">Blank</em>';
@@ -943,6 +1152,11 @@ rows.sort((a, b) => {
     return String(value);
   }
 
+  /**
+   * setupChangeNavigation()
+   * Setup keyboard shortcuts and button handlers for change navigation
+   * Keyboard: 'N' = next, 'P' = previous
+   */
   setupChangeNavigation() {
     const prevBtn = document.getElementById('prevChangeBtn');
     const nextBtn = document.getElementById('nextChangeBtn');
@@ -958,6 +1172,11 @@ rows.sort((a, b) => {
     this.setupKeyboardShortcuts();
   }
 
+  /**
+   * setupKeyboardShortcuts()
+   * Setup keyboard event listeners for change navigation
+   * P = previous change, N = next change
+   */
   setupKeyboardShortcuts() {
     if (this.keyboardHandler) {
       document.removeEventListener('keydown', this.keyboardHandler);
@@ -981,6 +1200,11 @@ rows.sort((a, b) => {
     document.addEventListener('keydown', this.keyboardHandler);
   }
 
+  /**
+   * collectChangedCells()
+   * Collect all changed cells (modified/added/deleted) for navigation
+   * Stores references to DOM elements for highlighting
+   */
   collectChangedCells() {
     this.changedCells = [];
     this.currentChangeIndex = -1;
@@ -1008,6 +1232,12 @@ rows.sort((a, b) => {
     this.updateNavigationUI();
   }
 
+  /**
+   * navigateToChange(direction)
+   * Navigate to next or previous changed cell
+   * 
+   * @param {string} direction - 'next' or 'prev'
+   */
   navigateToChange(direction) {
     if (this.changedCells.length === 0) return;
 
@@ -1021,24 +1251,36 @@ rows.sort((a, b) => {
     this.scrollToChange();
   }
 
+  /**
+   * scrollToChange()
+   * Scroll to currently selected changed cell and highlight it temporarily
+   */
   scrollToChange() {
     if (this.currentChangeIndex < 0 || this.currentChangeIndex >= this.changedCells.length) return;
 
     const { cell } = this.changedCells[this.currentChangeIndex];
 
+    // Remove previous highlights
     document.querySelectorAll('.cell-highlighted').forEach((c) => {
       c.classList.remove('cell-highlighted');
     });
 
+    // Highlight current cell
     cell.classList.add('cell-highlighted');
 
+    // Scroll to cell
     cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
+    // Remove highlight after 2 seconds
     setTimeout(() => {
       cell.classList.remove('cell-highlighted');
     }, 2000);
   }
 
+  /**
+   * updateNavigationUI()
+   * Update change counter display and button states
+   */
   updateNavigationUI() {
     const counter = document.getElementById('changeCounter');
     const prevBtn = document.getElementById('prevChangeBtn');
@@ -1057,6 +1299,16 @@ rows.sort((a, b) => {
     }
   }
 
+  /**
+   * compareByRowPosition(sheetA, sheetB, headerRowA, headerRowB)
+   * Compare sheets by row position (no key column matching)
+   * Matches row N in file A with row N in file B
+   * 
+   * @param {Array<Object>} sheetA - Data from first sheet
+   * @param {Array<Object>} sheetB - Data from second sheet
+   * @param {number} headerRowA - Header row number for sheet A
+   * @param {number} headerRowB - Header row number for sheet B
+   */
   compareByRowPosition(sheetA, sheetB, headerRowA, headerRowB) {
     console.log('🔢 Comparing by row position...');
 
@@ -1075,6 +1327,7 @@ rows.sort((a, b) => {
     const differences = [];
     const rowChanges = [];
 
+    // Compare rows by position
     for (let i = 0; i < maxRows; i++) {
       const rowA = dataRowsA[i] || {};
       const rowB = dataRowsB[i] || {};
@@ -1086,6 +1339,7 @@ rows.sort((a, b) => {
       const rowExistsInB = i < dataRowsB.length;
 
       if (!rowExistsInA) {
+        // Row only in B: Added
         rowChanges.push({
           rowKey: `position-${i}`,
           type: 'added',
@@ -1093,6 +1347,7 @@ rows.sort((a, b) => {
           row: rowB,
         });
       } else if (!rowExistsInB) {
+        // Row only in A: Deleted
         rowChanges.push({
           rowKey: `position-${i}`,
           type: 'deleted',
@@ -1100,6 +1355,7 @@ rows.sort((a, b) => {
           row: rowA,
         });
       } else {
+        // Row in both: Compare cells
         unifiedColumns.forEach(({ header, oldCol, newCol }) => {
           const valueA = oldCol ? (rowA[oldCol] ?? '') : '';
           const valueB = newCol ? (rowB[newCol] ?? '') : '';
@@ -1135,6 +1391,15 @@ rows.sort((a, b) => {
     this.renderUnifiedTableByPosition(singleSheetDiff, headerRowA, headerRowB);
   }
 
+  /**
+   * renderUnifiedTableByPosition(sheetDiff, headerRowA, headerRowB)
+   * Render unified table for position-based comparison
+   * Similar to renderUnifiedTable but uses position-based matching
+   * 
+   * @param {Object} sheetDiff - Comparison results
+   * @param {number} headerRowA - Header row number for sheet A
+   * @param {number} headerRowB - Header row number for sheet B
+   */
   renderUnifiedTableByPosition(sheetDiff, headerRowA, headerRowB) {
     const container = document.getElementById('unifiedTableContainer');
     if (!container) {
@@ -1163,6 +1428,16 @@ rows.sort((a, b) => {
     this.setupCellClickNavigation();
   }
 
+  /**
+   * buildUnifiedBodyByPosition(sheetDiff, headerRowA, headerRowB)
+   * Build table body for position-based comparison
+   * Rows are matched by position (row 1 vs row 1, row 2 vs row 2, etc.)
+   * 
+   * @param {Object} sheetDiff - Comparison results
+   * @param {number} headerRowA - Header row number for sheet A
+   * @param {number} headerRowB - Header row number for sheet B
+   * @returns {HTMLElement} Table body element
+   */
   buildUnifiedBodyByPosition(sheetDiff, headerRowA, headerRowB) {
     const tbody = document.createElement('tbody');
     const unifiedColumns = this.getUnifiedColumns(sheetDiff);
@@ -1187,22 +1462,26 @@ rows.sort((a, b) => {
 
       const rowChange = rowChanges.get(`position-${i}`);
 
+      // Apply row-level styling
       if (rowChange?.type === 'added') {
         tr.className = 'row-added';
       } else if (rowChange?.type === 'deleted') {
         tr.className = 'row-deleted';
       }
 
+      // Old Index column
       const tdOldIdx = document.createElement('td');
       tdOldIdx.className = 'index-cell old-idx';
       tdOldIdx.textContent = rowExistsInA ? excelRowA : '-';
       tr.appendChild(tdOldIdx);
 
+      // New Index column
       const tdNewIdx = document.createElement('td');
       tdNewIdx.className = 'index-cell new-idx';
       tdNewIdx.textContent = rowExistsInB ? excelRowB : '-';
       tr.appendChild(tdNewIdx);
 
+      // Render data cells
       unifiedColumns.forEach((col) => {
         const td = document.createElement('td');
 
@@ -1213,6 +1492,7 @@ rows.sort((a, b) => {
         const cellDiff = cellChanges.get(cellKey);
 
         if (cellDiff) {
+          // Cell value changed
           td.className = 'cell-modified';
           td.innerHTML = `
             <div class="cell-value-change">

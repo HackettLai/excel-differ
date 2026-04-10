@@ -322,7 +322,7 @@ class DiffEngine {
       const key = String(row.A || '').trim() || `old-${index}`;
       oldRowMap.set(key, {
         row,
-        index: headerRowA + 1 + index, // ✅ CORRECT
+        index: headerRowA + 1 + index, 
       });
     });
 
@@ -330,7 +330,7 @@ class DiffEngine {
       const key = String(row.A || '').trim() || `new-${index}`;
       newRowMap.set(key, {
         row,
-        index: headerRowB + 1 + index, // ✅ CORRECT
+        index: headerRowB + 1 + index, 
       });
     });
 
@@ -405,7 +405,7 @@ class DiffEngine {
       const key = String(row.A || '').trim() || `old-${index}`;
       oldRowMap.set(key, {
         row,
-        index: headerRowA + 1 + index, // ✅ CORRECT
+        index: headerRowA + 1 + index, 
       });
     });
 
@@ -413,7 +413,7 @@ class DiffEngine {
       const key = String(row.A || '').trim() || `new-${index}`;
       newRowMap.set(key, {
         row,
-        index: headerRowB + 1 + index, // ✅ CORRECT
+        index: headerRowB + 1 + index, 
       });
     });
 
@@ -432,7 +432,7 @@ class DiffEngine {
 
             if (oldVal !== newVal) {
               differences.push({
-                row: oldRowData.index, // ✅ Now correct
+                row: oldRowData.index, 
                 header: headerContent,
                 oldCol: oldCol,
                 newCol: newCol,

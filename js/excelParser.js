@@ -129,7 +129,7 @@ class ExcelParser {
   /**
    * extractSheetData(workbook)
    * Extracts data from all sheets in a workbook
-   * ✅ 使用 trim 過後既實際 data length 黎計 rowCount
+   * After trim, the actual data length is counted as rowCount.
    */
   extractSheetData(workbook) {
     const result = {
@@ -148,15 +148,15 @@ class ExcelParser {
         blankrows: true, // Include blank rows initially
       });
 
-      // ✅ Normalize AND trim data
+      // Normalize AND trim data
       const processedData = this.normalizeAndTrimSheetData(jsonData);
 
-      // ✅ 用處理過既 data length
+      // Use processed data length
       const rowCount = processedData.length;
 
       result.sheets[sheetName] = {
         data: processedData,
-        rowCount: rowCount, // ✅ 而家係正確既 row count
+        rowCount: rowCount, 
       };
 
       console.log(`📊 Sheet "${sheetName}": ${rowCount} rows (after trimming)`);
@@ -167,7 +167,7 @@ class ExcelParser {
 
   /**
    * normalizeAndTrimSheetData(jsonData)
-   * ✅ Normalize values AND trim blank rows/columns
+   * Normalize values AND trim blank rows/columns
    * 
    * Process:
    * 1. Normalize all cell values (trim whitespace, remove invisible chars)
@@ -188,7 +188,7 @@ class ExcelParser {
       Object.keys(row).forEach((col) => {
         let value = row[col];
 
-        // ✅ Normalize value
+        // Normalize value
         if (value === null || value === undefined) {
           normalizedRow[col] = null;
         } else {
@@ -250,7 +250,7 @@ class ExcelParser {
 
   /**
    * trimCompletelyBlankColumns(data)
-   * ✅ 移除完全空白既列 (所有 rows 都係 blank 既 column)
+   * Remove completely blank columns (all rows are blank columns).
    */
   trimCompletelyBlankColumns(data) {
     if (!data || data.length === 0) return data;

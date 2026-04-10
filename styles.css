@@ -418,7 +418,6 @@ body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  overflow: auto;
 }
 
 .diff-header {
@@ -474,8 +473,8 @@ body {
 
 .diff-controls {
   display: flex;
-  position: sticky;
-  top: 0;
+  /* position: sticky;
+  top: 0; */
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;

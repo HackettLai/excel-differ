@@ -2,7 +2,7 @@
 
 A web-based Excel file comparison tool that helps you identify differences between two Excel files quickly and easily. Runs completely in your browser with no server uploads required.
 
-![Excel Differ](https://img.shields.io/badge/version-2.2.0-blue.svg)
+![Excel Differ](https://img.shields.io/badge/version-2.2.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Static Badge](https://img.shields.io/badge/AI%20Assist-Claude%20Sonnet%204.5-orange)
 
@@ -33,23 +33,44 @@ A web-based Excel file comparison tool that helps you identify differences betwe
 
 [Live Demo](https://excel-differ.hackettlai.com)
 
-## What's New in Version 2.2.0 🎉
+## What's New in Version 2.2.1 🎉
 
 ### Major Enhancements
 
-- **Position-based Comparison**: New mode that matches rows strictly by their order when a key column is not desired or available. Useful for simple datasets or when row identity is implied by position.
+- **Interleaved Row Sorting**: ⭐ NEW  
+  Deleted rows now appear in context! When rows are deleted, they're inserted immediately before the next corresponding new row position, making it much easier to understand what changed and where.
+  
+  **Example:**
 
-- **Enhanced CSV Handling**: Added automatic encoding detection (UTF-8, GBK, Big5) with a one‑time session warning to avoid garbled text. CSV uploads are now more robust across different character sets.
+  - Old File: New File:
+  - Row 5: Data A Row 5: Data B
+  - Row 6: Data B Row 6: Data C
+  - Row 7: Data C
+
+  - Display Order (Interleaved):
+  - Row 5 → 5: Data A → Data B (Modified)
+  - Row 6 → -: Data B (Deleted, shown before new row 6)
+  - Row 7 → 6: Data C (Matched)
+- **Blank Key Column Handling**: ⭐ NEW  
+When rows have empty key column values, the tool now intelligently matches them using:
+  1. Position-based matching (same row number in both files)
+  2. Content comparison (all columns must match exactly)
+
+  This prevents false positives when comparing files with occasional blank IDs.
+
+- **Enhanced Row Matching Accuracy**: ⭐ NEW  
+  - Fixed row number calculation for non-default header rows
+  - Improved Excel row number display (correctly shows header row + data row index)
+  - Better handling of edge cases in key-based matching
 
 ### Bug Fixes & Improvements
 
-- ✅ Fixed header row dropdown not populating when no sheets are selected
-- ✅ Corrected rendering method selection for position-based comparison mode
-- ✅ **Improved CSV warning UX - now shows only once per browser session** ⭐ NEW
-- ✅ Fixed CSV warning display logic and session storage handling
-- ✅ Fixed row number display when using non-default header rows
-- ✅ Corrected Excel row calculation for data rows
-- ✅ Improved row matching accuracy with custom key columns
+- ✅ Fixed row sorting to show deleted rows in logical positions
+- ✅ Corrected Excel row number calculation for all header row selections
+- ✅ Improved blank key column matching logic
+- ✅ Fixed row type detection (matched/added/deleted)
+- ✅ Enhanced debug logging for troubleshooting
+- ✅ Improved CSV warning UX - now shows only once per browser session
 
 
 ## Supported File Formats 📋
@@ -210,6 +231,36 @@ excel-differ/
 | Edge    | 90+     | ✅ Fully Supported |
 
 ## Features in Detail 🔬
+### Interleaved Row Sorting
+**Problem:** Traditional diff tools show all deletions at the top or bottom, making it hard to understand context.
+
+**Solution:** Excel Differ uses intelligent interleaved sorting:
+1. **Matched and Added Rows:** Follow new file's order
+2. **Deleted Rows:** Inserted before the next new row that corresponds to a later old row position
+
+**Algorithm:**
+- For matched/added rows: `sortKey = newIndex × 1000`
+- For deleted rows: `sortKey = (next new row's corresponding old position) × 1000 - 500`
+
+**Example:**
+```
+Old File:              New File:
+Row 5: Product A       Row 5: Product B
+Row 6: Product B       Row 6: Product C
+Row 7: Product C       Row 7: Product D
+Row 8: Product D
+
+If "Product A" is deleted:
+
+Display Order:
+5 → -:  Product A      (Deleted, shown before row 5)
+6 → 5:  Product B      (Matched)
+7 → 6:  Product C      (Matched)
+8 → 7:  Product D      (Matched)
+```
+
+This creates a natural reading flow where deletions appear exactly where they belong contextually.
+
 
 ### Smart Column Matching
 
@@ -217,12 +268,83 @@ The tool matches columns by header content, not position:
 
 - **Header-Based Matching**: Columns with identical header text are matched
   - Example: If "Email Address" moves from column G to H, it's still matched correctly
+- **Case-Insensitive Matching:** "Email" matches "email", "EMAIL", etc.
 - **Reordering Tolerance**: Column position changes don't trigger false positives
   - Cells are compared based on what column they logically belong to
   - Reordered columns are NOT marked as added/deleted
 - **True Add/Delete Detection**: Only reports genuine column additions/deletions
   - Added column: Header exists in File B but not in File A
   - Deleted column: Header exists in File A but not in File B
+
+### Blank Key Column Handling
+**Challenge:** What happens when key column values are blank?
+
+**Solution:** Multi-step intelligent matching:
+
+1. **Non-blank keys:** Match by key value (normal behavior)
+2. **Blank keys in old file:**
+    - Check if same position exists in new file with blank key
+    - Compare all column values for exact match
+    - If match: Treat as same row (matched)
+    - If no match: Treat as separate rows (deleted + added)
+
+**Example:**
+```
+File A:                File B:
+Row  | ID | Name       Row  | ID | Name
+  5  |    | Alice        5  |    | Alice   ← Matched (blank ID + content match)
+  6  |    | Bob          6  |    | Charlie ← No match (different content)
+  
+Result:
+Row 5 → 5:  Alice      (Matched - blank ID but content identical)
+Row 6 → -:  Bob        (Deleted)
+Row - → 6:  Charlie    (Added)
+```
+This prevents treating identical blank-ID rows as different.
+
+### Row Matching Modes
+**Key-Based Matching (Recommended)**
+Uses a user-selected Key Column for matching:
+- **Select Key Column:** Choose any column that exists in both files
+- **Auto-Detection:** Tool finds common columns automatically
+- **Case-Insensitive:** "ID" matches "id"
+- **Blank Key Handling:** Uses position + content matching for blank keys
+
+**Example:**
+```
+If "Employee ID" is selected as key:
+
+File A:                File B:
+Row | ID   | Name      Row | ID   | Name
+ 10 | 1001 | Alice      10 | 1001 | Alice   ← Matched by ID
+ 11 | 1002 | Bob        11 | 1003 | Charlie ← Different IDs = different rows
+ 12 | 1003 | Charlie    12 | 1002 | Bob     ← Matched by ID (reordered)
+
+Result:
+10 → 10: Alice         (Matched)
+11 → -:  Bob (ID 1002) (Deleted)
+12 → 12: Bob (ID 1002) (Matched, reordered)
+-  → 11: Charlie       (Added)
+```
+
+**Position-Based Matching**
+Select "(Use Row Position)" to match rows strictly by position:
+
+- **No Key Required:** Works without unique identifiers
+- **Simple Comparison:** Row N in File A matches Row N in File B
+- **Best For:** Simple datasets, fixed-structure reports
+
+**Example:**
+```
+File A:                File B:
+Row 5: Alice          Row 5: Bob     ← Position 5 = Modified
+Row 6: Bob            Row 6: Bob     ← Position 6 = Unchanged
+
+Result:
+5 → 5: Alice → Bob    (Modified)
+6 → 6: Bob            (Unchanged)
+```
+
 
 ### Change Navigation
 
@@ -242,29 +364,6 @@ Quickly navigate through all cell-level changes:
   - 2-second highlight with CSS animation
   - Smooth scroll with centering
 
-### Row Matching
-
-Rows are matched using a **user-selected Key Column**:
-
-- **Key Column Selection**:
-  - Choose any column that exists in both files
-  - Auto-detects common columns by comparing headers
-  - Case-insensitive matching (e.g., "ID" matches "id")
-  - No longer limited to Column A
-  
-- **Key-Based Matching**: 
-  - Uses selected key column value to identify matching rows
-  - Example: If "Employee ID" is selected:
-    - Row with ID "12345" in File A matches ID "12345" in File B
-    - Even if row positions differ, they're still matched
-  
-- **Fallback for Empty Keys**: 
-  - For rows without key values, uses position-based matching
-  - Compares all columns to ensure exact match
-  
-- **Add/Delete Detection**:
-  - Added row: Key exists in File B but not in File A
-  - Deleted row: Key exists in File A but not in File B
 
 ### Performance Optimizations
 
